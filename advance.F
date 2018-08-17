@@ -567,13 +567,8 @@ C$OMP END PARALLEL DO
          up3(3) = w_c(n)
 
          if(lrigid) then
-            F_v(1) = - for_px(n)*(delta_t/t_step) ! stupid definition
-            F_v(2) = - for_py(n)*(delta_t/t_step) ! in direct forcing 
-            F_v(3) = - for_pz(n)*(delta_t/t_step)
-
+           
             if(lcheck) then
-               F_v(1) = 0.d0
-               F_v(3) = 0.d0
                if(irk .eq. 1) then
 !                  call weighted_fluid_vel(weight_v)
                   do l=1,n_l(1)
@@ -610,14 +605,23 @@ C$OMP END PARALLEL DO
 
                endif
             endif
-
-            call part_translation2(xp3,up3,F_v,grav,vol_ellip,t_step)
-            torq_v(1) = - torq_x(n)*(delta_t/t_step) ! stupid definition
-            torq_v(2) = - torq_y(n)*(delta_t/t_step) ! in direct forcing
-            torq_v(3) = - torq_z(n)*(delta_t/t_step) ! check ? 
-c     !call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
-c     !&           torq_v,I_ellip,t_step)
             
+            if(ltranslation) then
+               F_v(1) = - for_px(n)*(delta_t/t_step) ! stupid definition
+               F_v(2) = - for_py(n)*(delta_t/t_step) ! in direct forcing 
+               F_v(3) = - for_pz(n)*(delta_t/t_step)
+
+               call part_translation2(xp3,up3,F_v,grav,vol_ellip,t_step)
+            endif
+            if(lrotation) then
+               torq_v(1) = - torq_x(n)*(delta_t/t_step) ! stupid definition
+               torq_v(2) = - torq_y(n)*(delta_t/t_step) ! in direct forcing
+               torq_v(3) = - torq_z(n)*(delta_t/t_step) ! check ?
+!     regid body assumption
+               torq_v = rho_f*rho_p/(rho_p-rho_f)*torq_v
+               call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
+     &              torq_v,I_ellip,t_step)
+            endif
          else
             call part_inner_integral(u_temp,v_temp,w_temp,
      &           int_u1(n),int_v1(n),int_w1(n),

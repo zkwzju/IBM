@@ -22,7 +22,7 @@ module ellip_common_m
   real(wp) :: frac_step,aalpha
   integer  :: imethod
   integer  :: iweight,iflag_ibm
-  logical  :: lexact_weight,lupdate_dv,lrigid,lnonuniform
+  logical  :: lexact_weight,lupdate_dv,lrigid,lnonuniform,lrotation,ltranslation
   logical  :: lcheck,llinear_v
   character(len=100) :: sname,sname_w
 end module ellip_common_m

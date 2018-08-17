@@ -30,6 +30,8 @@ contains
     end if
     call parser_read('Scale factor for dv',scale_dv,1.0_wp)
     call parser_read('Rigid body assumption',lrigid,.true.)
+    call parser_read('Translational motion',ltranslation,.true.)
+    call parser_read('Rotational motion',lrotation,.false.)
     call parser_read('Prestep fraction',frac_step,0.0_wp)
     if(frac_step < 0.0_wp .or. frac_step > 1.0_wp) then
        write(*,*) 'Prestep fraction wrong value:',frac_step
