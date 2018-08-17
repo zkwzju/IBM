@@ -243,13 +243,9 @@ cccccccccccccccccccccccccccccccccccccccccc GA ccccccccccccccccc
       close(unit=1120)
       close(unit=1121)
       close(unit=1122)
-      
       close(unit=114)
       close(unit=115)
       close(unit=116)
-      close(unit=117)
-      close(unit=118)
-      close(unit=119)
       close(unit=120)
       close(unit=121)
       close(unit=122)

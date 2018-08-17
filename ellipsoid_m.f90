@@ -291,39 +291,8 @@ contains
 
     end do
     !$OMP END PARALLEL DO
-
-    if(itime .eq. 1 ) then
-       if(irkk .eq. 3) then
-          open(unit=88,file='orientation_matrix')
-          write(88,'(I7,9f10.6)') itime, ((A(i,j),i=1,3),j=1,3)
-
-          open(unit=1110, file='position_x')      ! particle position
-          open(unit=1111, file='position_y')      ! particle position
-          open(unit=1112, file='position_z')      ! particle position
-          open(unit=1120, file='velocity_x')      ! particle velocity
-          open(unit=1121, file='velocity_y')      ! particle velocity
-          open(unit=1122, file='velocity_z')      ! particle velocity
-
-          ! export lagrangian markers coordinates
-          open(unit=170, file='lagrangian_pts.plt', status='unknown')
-          write(170,*) "VARIABLES=x,y,z"
-          do n=1,num_p
-             do l=1,n_l(n)
-                write(170,*) x_o(l,n),y_o(l,n),z_o(l,n)
-             enddo
-          enddo
-          close(170)
-
-          ! export arm of force
-          open(unit=170, file='arm_of_force.dat', status='unknown')
-          do n=1,num_p
-             do l=1,n_l(n)
-                write(170,*) rx_l(l,n),ry_l(l,n),rz_l(l,n)
-             enddo
-          enddo
-          close(170)
-       endif
-    else if(irkk .eq. 3) then
+    
+    if(irkk .eq. 3) then
        write(88,'(I7,9f10.6)') itime, ((A(i,j),i=1,3),j=1,3)
        write(1110, 300) itime,(x_c(i),i=1,num_p)
        write(1111, 300) itime,(y_c(i),i=1,num_p)
@@ -331,10 +300,12 @@ contains
        write(1120, 300) itime,(u_c(i),i=1,num_p)
        write(1121, 300) itime,(v_c(i),i=1,num_p)
        write(1122, 300) itime,(w_c(i),i=1,num_p)
-    else
-       continue
+       write(110,  300) itime,(om_x(i),i=1,num_p)
+       write(111,  300) itime,(om_y(i),i=1,num_p)
+       write(112,  300) itime,(om_z(i),i=1,num_p)
     endif
 300 format (I7,<num_p>E15.7)
+
     
   end subroutine Lag_marker_moving
 

@@ -148,15 +148,19 @@ contains
     open(unit=114, file='liftx')
     open(unit=115, file='drag')
     open(unit=116, file='liftz')
-    open(unit=117, file='center_u')
-    open(unit=118, file='center_v')
-    open(unit=119, file='center_w')
-    open(unit=120, file='om_x')
+    open(unit=120, file='om_x')             ! rotational velocity        
     open(unit=121, file='om_y')
     open(unit=122, file='om_z')
     open(unit=123, file='moment_x')
     open(unit=124, file='moment_y')
     open(unit=125, file='moment_z')
 
+    open(unit=88,file='orientation_matrix')
+    open(unit=1110, file='position_x')      ! particle position
+    open(unit=1111, file='position_y')      ! particle position
+    open(unit=1112, file='position_z')      ! particle position
+    open(unit=1120, file='velocity_x')      ! particle velocity
+    open(unit=1121, file='velocity_y')      ! particle velocity
+    open(unit=1122, file='velocity_z')      ! particle velocity
   end subroutine initialization
 end module init_m

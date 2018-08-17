@@ -348,18 +348,13 @@ c
          write(114,*) itime,c_lx_cluster
          write(115,*) itime,c_d_cluster
          write(116,*) itime,c_lz_cluster
-!        write(404,'(4ES16.6)') rtime,moment_x(1),moment_y(1),moment_z(1)
+         write(123,300) rtime,(moment_x(n),n=1,num_p)
+         write(124,300) rtime,(moment_y(n),n=1,num_p)
+         write(125,300) rtime,(moment_z(n),n=1,num_p)
       endif
 
+ 300  format (E15.7,<num_p>E15.7)
       
-c$$$      if(lcheck) then
-c$$$         call int_f_fluid
-c$$$         
-c$$$         write(401,*) itime,int_fx,for_px
-c$$$         write(402,*) itime,int_fy,for_py
-c$$$         write(403,*) itime,int_fz,for_pz
-c$$$      endif
-
 !>>>
       if(lcheck) then
          if(irkk .eq. 1) then
