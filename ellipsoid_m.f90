@@ -28,6 +28,7 @@ contains
     else
        lupdate_dv = .false.
     end if
+    call parser_read('Scale factor for particle',scale_p,1.0_wp)
     call parser_read('Scale factor for dv',scale_dv,1.0_wp)
     call parser_read('Rigid body assumption',lrigid,.true.)
     call parser_read('Translational motion',ltranslation,.true.)
@@ -298,7 +299,7 @@ contains
 
     end do
     !$OMP END PARALLEL DO
-    
+
     if(irkk .eq. 3) then
        write(88,'(I7,9f10.6)') itime, ((A(i,j),i=1,3),j=1,3)
        write(1110, 300) itime,(x_c(i),i=1,num_p)

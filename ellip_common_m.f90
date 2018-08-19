@@ -18,7 +18,7 @@ module ellip_common_m
   real(wp) :: xa,xb,xc
   real(wp) :: mesh_length
   real(wp) :: v0_l
-  real(wp) :: scale_dv
+  real(wp) :: scale_dv,scale_p
   real(wp) :: frac_step,aalpha
   integer  :: imethod
   integer  :: iweight,iflag_ibm

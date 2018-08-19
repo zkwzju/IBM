@@ -348,12 +348,12 @@ c
          write(114,*) itime,c_lx_cluster
          write(115,*) itime,c_d_cluster
          write(116,*) itime,c_lz_cluster
-         write(123,300) rtime,(moment_x(n),n=1,num_p)
-         write(124,300) rtime,(moment_y(n),n=1,num_p)
-         write(125,300) rtime,(moment_z(n),n=1,num_p)
+         write(123,310) itime,(moment_x(n),n=1,num_p)
+         write(124,310) itime,(moment_y(n),n=1,num_p)
+         write(125,310) itime,(moment_z(n),n=1,num_p)
       endif
 
- 300  format (E15.7,<num_p>E15.7)
+ 310  format (I7,<num_p>E15.7)
       
 !>>>
       if(lcheck) then

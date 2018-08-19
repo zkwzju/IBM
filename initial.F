@@ -1247,9 +1247,7 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
             do k=1,nz
                u(i,j,k)=0.d0
                if(llinear_v) then
-                     
-                  v(i,j,k)=vbct(i,j)/(zets(1)-zets(nz))*zets(k)
-     &                 -vbct(i,j)*zets(nz)/(zets(1)-zets(nz))
+                  v(i,j,k)=(vt_l-vb_l)/rlenz*(zets(k)+rlenz/2.D0)+vb_l
                else
                   v(i,j,k)=v0_l
                endif

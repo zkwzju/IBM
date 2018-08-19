@@ -29,7 +29,10 @@ contains
        end select
     end do
 
-    write(*,*) 'generate_points done ------'
+    xlp = scale_p * xlp     ! scale particle size
+    ylp = scale_p * ylp
+    zlp = scale_p * zlp
+    
 
   end subroutine generate_points
 

@@ -689,5 +689,5 @@ c     !&           torq_v,I_ellip,t_step)
          om_z(n) = om_ellip(3)
          
       enddo
-      call Lag_marker_moving
+      return
       end subroutine particle_motion
