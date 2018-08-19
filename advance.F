@@ -611,12 +611,30 @@ C$OMP END PARALLEL DO
                F_v(2) = - for_py(n)*(delta_t/t_step) ! in direct forcing 
                F_v(3) = - for_pz(n)*(delta_t/t_step)
 
+               if(lclip_x) then
+                  F_v(1) = 0.0D0
+               endif
+               if(lclip_y) then
+                  F_v(2) = 0.0D0
+               endif
+               if(lclip_z) then
+                  F_v(2) = 0.0D0
+               endif
                call part_translation2(xp3,up3,F_v,grav,vol_ellip,t_step)
             endif
             if(lrotation) then
                torq_v(1) = - torq_x(n)*(delta_t/t_step) ! stupid definition
                torq_v(2) = - torq_y(n)*(delta_t/t_step) ! in direct forcing
                torq_v(3) = - torq_z(n)*(delta_t/t_step) ! check ?
+               if(lclip_ox) then
+                  torq_v(1) = 0.0D0
+               endif
+               if(lclip_oy) then
+                  torq_v(2) = 0.0D0
+               endif
+               if(lclip_oz) then
+                  torq_v(3) = 0.0D0
+               endif
 !     regid body assumption
                torq_v = rho_f*rho_p/(rho_p-rho_f)*torq_v
                call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,

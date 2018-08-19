@@ -23,6 +23,7 @@ module ellip_common_m
   integer  :: imethod
   integer  :: iweight,iflag_ibm
   logical  :: lexact_weight,lupdate_dv,lrigid,lnonuniform,lrotation,ltranslation
+  logical  :: lclip_x,lclip_y,lclip_z,lclip_ox,lclip_oy,lclip_oz
   logical  :: lcheck,llinear_v
   character(len=100) :: sname,sname_w
 end module ellip_common_m

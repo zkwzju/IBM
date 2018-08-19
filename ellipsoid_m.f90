@@ -39,7 +39,14 @@ contains
     endif
     call parser_read('Non-uniform z-grid',lnonuniform,.false.)
     call parser_read('Z-grid stretching parameter',aalpha,0.99_wp)
-    call parser_read('Additional checking flag',lcheck,.false.) 
+    call parser_read('Additional checking flag',lcheck,.false.)
+
+    call parser_read('clip x translation',lclip_x,.false.)
+    call parser_read('clip y translation',lclip_y,.false.)
+    call parser_read('clip z translation',lclip_z,.false.)
+    call parser_read('clip x rotation',lclip_ox,.false.)
+    call parser_read('clip y rotation',lclip_oy,.false.)
+    call parser_read('clip z rotation',lclip_oz,.false.)
   end subroutine read_settings
 
   ! -------------------------------------------------- !
@@ -300,9 +307,9 @@ contains
        write(1120, 300) itime,(u_c(i),i=1,num_p)
        write(1121, 300) itime,(v_c(i),i=1,num_p)
        write(1122, 300) itime,(w_c(i),i=1,num_p)
-       write(110,  300) itime,(om_x(i),i=1,num_p)
-       write(111,  300) itime,(om_y(i),i=1,num_p)
-       write(112,  300) itime,(om_z(i),i=1,num_p)
+       write(120,  300) itime,(om_x(i),i=1,num_p)
+       write(121,  300) itime,(om_y(i),i=1,num_p)
+       write(122,  300) itime,(om_z(i),i=1,num_p)
     endif
 300 format (I7,<num_p>E15.7)
 
