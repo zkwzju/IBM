@@ -26,6 +26,7 @@ Update weight dv	: 0     ! 1: update dv every time step
 Rigid body assumption	: 1
 Translational motion	: 0    ! default 1
 Rotational motion	: 1
+Sphere particle		: 1    ! default 1
 
 clip x translation	: 1	! default 0
 clip y translation      : 0     ! default 0

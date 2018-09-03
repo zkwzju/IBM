@@ -72,15 +72,35 @@ c     to calculate the Lagrangian volume
       end select
 
       dv_l = dv_l * scale_dv      ! for invistigating purpose
-      
+      end do
+
       if(itime .eq. 0) then
          open(101,file='dv_l.dat',action='write',position='append')
-         write(101,*) 'particle #',n
-         write(101,*) dv_l(1:n_l(n),n)
+         do n=1,num_p
+            write(101,*) 'particle #',n
+            write(101,*) dv_l(1:n_l(n),n)
+         enddo
          close(101)
+
+!     export lagrangian markers coordinates
+         open(unit=170, file='lagrangian_pts.plt', status='unknown')
+         write(170,*) "VARIABLES=x,y,z"
+         do n=1,num_p
+            do l=1,n_l(n)
+               write(170,*) x_o(l,n),y_o(l,n),z_o(l,n)
+            enddo
+         enddo
+         close(170)
+
+!     export arm of force
+         open(unit=170, file='arm_of_force.dat', status='unknown')
+         do n=1,num_p
+            do l=1,n_l(n)
+               write(170,*) rx_l(l,n),ry_l(l,n),rz_l(l,n)
+            enddo
+         enddo
+         close(170)
       end if
-      
-      end do
 !>>>
 !      call correlation(n_ll,vol)
 !      call single_point_test

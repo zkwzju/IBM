@@ -44,6 +44,18 @@ contains
     
   end subroutine part_rotation
   ! -------------------------------------------------- !
+  subroutine part_rotation2(om,torq,I_ellip,dt)
+    use ellip_common_m, only: rho_p,rho_f
+    use rotation_m
+
+    real(wp),intent(inout) :: om(3) ! rotation in Eulerian frame
+    real(wp),intent(in)    :: torq(3) ! Eulerian frame
+    real(wp),intent(in)    :: I_ellip(3)
+    real(wp),intent(in)    :: dt
+
+    om=om+dt*rho_p*rho_f/(I_ellip*(rho_p-rho_f))*torq
+  end subroutine part_rotation2
+  ! -------------------------------------------------- !
   subroutine force_on_particle(rho_f,rho_p,m_p,u,u_old,FcrossV,g,F_all)
     real(wp), intent(in)  :: rho_f,rho_p,m_p
     real(wp), intent(in)  :: u(3), u_old(3), FcrossV(3), g(3)

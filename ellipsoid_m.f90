@@ -41,6 +41,8 @@ contains
     call parser_read('Non-uniform z-grid',lnonuniform,.false.)
     call parser_read('Z-grid stretching parameter',aalpha,0.99_wp)
     call parser_read('Additional checking flag',lcheck,.false.)
+    call parser_read('Sphere particle',lsphere,.true.)
+    call parser_read('Convection',lconvect,.false.)
 
     call parser_read('clip x translation',lclip_x,.false.)
     call parser_read('clip y translation',lclip_y,.false.)

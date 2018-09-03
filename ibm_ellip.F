@@ -1,6 +1,6 @@
       SUBROUTINE ibm_ellip(cfnl2,cfdif)
       use ellipsoid_m, only: for_px,for_py,for_pz,
-     &     torq_x,torq_y,torq_z,lcheck
+     &     torq_x,torq_y,torq_z,lcheck,lconvect
       use p_dyn_m
       use common_m
       implicit none
@@ -67,7 +67,7 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
          enddo
       enddo
 
-      if(irkk .eq. 1) then
+
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
       do k=1,nz
          do j=1,ny0
@@ -83,69 +83,53 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
      &                                       -2.d0*cfdif*dpz(i,j,k)
 !>>>
                if(lcheck) then
-                  forcing_x0(i,j,k) = (
-     &                 +cfnl2*h1(i,j,k)
-     &                 +2.d0*cfdif*ru(i,j,k)
-     &                 -2.d0*cfdif*dpx(i,j,k))/dt
-                  forcing_y0(i,j,k) = (
-     &                 +cfnl2*h2(i,j,k)
-     &                 +2.d0*cfdif*rv(i,j,k)
-     &                 -2.d0*cfdif*dpy(i,j,k))/dt
-                  forcing_z0(i,j,k) = (
-     &                 +cfnl2*h3(i,j,k)
-     &                 +2.d0*cfdif*rw(i,j,k)
-     &                 -2.d0*cfdif*dpz(i,j,k))/dt
-!<<<  
+                  if(lconvect) then
+                     forcing_x03(i,j,k) = (
+     &                    +cfnl2*h1(i,j,k)
+     &                    +2.d0*cfdif*ru(i,j,k)
+     &                    -2.d0*cfdif*dpx(i,j,k))/dt
+                     forcing_y03(i,j,k) = (
+     &                    +cfnl2*h2(i,j,k)
+     &                    +2.d0*cfdif*rv(i,j,k)
+     &                    -2.d0*cfdif*dpy(i,j,k))/dt
+                     forcing_z03(i,j,k) = (
+     &                    +cfnl2*h3(i,j,k)
+     &                    +2.d0*cfdif*rw(i,j,k)
+     &                    -2.d0*cfdif*dpz(i,j,k))/dt
+
+                  else
+                     forcing_x03(i,j,k) = (
+!     &                    +cfnl2*h1(i,j,k)
+     &                    +2.d0*cfdif*ru(i,j,k)
+     &                    -2.d0*cfdif*dpx(i,j,k))/dt
+                     forcing_y03(i,j,k) = (
+!     &                    +cfnl2*h2(i,j,k)
+     &                    +2.d0*cfdif*rv(i,j,k)
+     &                    -2.d0*cfdif*dpy(i,j,k))/dt
+                     forcing_z03(i,j,k) = (
+!     &                    +cfnl2*h3(i,j,k)
+     &                    +2.d0*cfdif*rw(i,j,k)
+     &                    -2.d0*cfdif*dpz(i,j,k))/dt
+                  endif
                endif
             enddo
          enddo
       enddo
 C$OMP END PARALLEL DO
-      else
-C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
-      do k=1,nz
-         do j=1,ny0
-            do i=1,nx0
-               u_tilde(i,j,k)=u(i,j,k)
-     &                        +cfnl2*h1(i,j,k)+2.d0*cfdif*ru(i,j,k)
-     &                                       -2.d0*cfdif*dpx(i,j,k)
-               v_tilde(i,j,k)=v(i,j,k)
-     &                        +cfnl2*h2(i,j,k)+2.d0*cfdif*rv(i,j,k)
-     &                                       -2.d0*cfdif*dpy(i,j,k)
-               w_tilde(i,j,k)=w(i,j,k)
-     &                        +cfnl2*h3(i,j,k)+2.d0*cfdif*rw(i,j,k)
-     &                                       -2.d0*cfdif*dpz(i,j,k)
-!>>>
-               if(lcheck) then
-                  forcing_x0(i,j,k) = (
-!     &              +cfnl2*h1(i,j,k)
-     &                 +2.d0*cfdif*ru(i,j,k)
-     &                 -2.d0*cfdif*dpx(i,j,k))/dt
-                  forcing_y0(i,j,k) = (
-!     &              +cfnl2*h2(i,j,k)
-     &                 +2.d0*cfdif*rv(i,j,k)
-     &                 -2.d0*cfdif*dpy(i,j,k))/dt
-                  forcing_z0(i,j,k) = (
-!     &              +cfnl2*h3(i,j,k)
-     &                 +2.d0*cfdif*rw(i,j,k)
-     &                 -2.d0*cfdif*dpz(i,j,k))/dt
-!<<<  
-               endif
-            enddo
-         enddo
-      enddo
-C$OMP END PARALLEL DO
-      endif
+
 !>>>  
       if(lcheck) then
-         if(irkk .eq. 1) then
-            forcing_x01=forcing_x0
-            forcing_y01=forcing_y0
-            forcing_z01=forcing_z0
-         elseif(irkk .eq.2) then
-            forcing_x02=forcing_x0
-            forcing_y02=forcing_y0
-            forcing_z02=forcing_z0
+         call fft_f2r_2d_new(forcing_x03)
+         call fft_f2r_2d_new(forcing_y03)
+         call fft_f2r_2d_new(forcing_z03)
+         if(irkk .eq.1) then
+            forcing_x01=forcing_x03
+            forcing_y01=forcing_y03
+            forcing_z01=forcing_z03
+         elseif(irkk .eq. 2) then
+            forcing_x02=forcing_x03
+            forcing_y02=forcing_y03
+            forcing_z02=forcing_z03
          endif
       endif
 !<<<         
@@ -336,11 +320,11 @@ c
          c_lx_cluster=0.d0
          c_lz_cluster=0.d0
          do n=1,num_p
-            if(mod((itime-istart),oi_chan).eq.0) then
-               write(175,100) itime,n,c_d_total(n),
-     &              c_lx_total(n),c_lz_total(n),
-     &              moment_x(n),moment_y(n),moment_z(n)
-            endif
+!            if(mod((itime-istart),oi_chan).eq.0) then
+!               write(175,100) itime,n,c_d_total(n),
+!     &              c_lx_total(n),c_lz_total(n),
+!     &              moment_x(n),moment_y(n),moment_z(n)
+!            endif
             c_d_cluster =c_d_cluster+c_d_total(n)
             c_lx_cluster=c_lx_cluster+c_lx_total(n)
             c_lz_cluster=c_lz_cluster+c_lz_total(n)
@@ -365,6 +349,10 @@ c
             forcing_x2 = forcing_x
             forcing_y2 = forcing_y
             forcing_z2 = forcing_z
+         else
+            forcing_x3 = forcing_x
+            forcing_y3 = forcing_y
+            forcing_z3 = forcing_z
          endif
       endif
 !<<<      

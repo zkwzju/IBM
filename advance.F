@@ -420,7 +420,7 @@ c
       integer irk
       integer l,n,i1,i2,j1,j2,k1,k2
       integer i,j,k,i_t,j_t,i_ddf,j_ddf
-
+      integer nblock,nremain,nn
       
 
 !      if(irk .eq. 1 .or. irk .eq. 2) return  ! write if only irk=3
@@ -465,8 +465,19 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
             diff_v(l,n)=diff_v(l,n)-v_p(l,n)   ! vel difference
 
          enddo
-         write(666,'(3ES16.8,<n_ll>ES16.8)') rtime,y_c(n),v_c(n),
-     &        (diff_v(l,n),l=1,n_l(n))
+         
+         nblock=ceiling(n_ll/200.0d0)
+         nremain=mod(n_ll,200)
+         write(666,'(ES16.8)') rtime
+         do nn=1,nblock
+            if(nn .eq. nblock) then
+               write(666,'(<nremain>ES16.8)') (diff_v(l,n),
+     &          l=(nn-1)*200+1,n_l(n))
+            else
+               write(666,'(200ES16.8)') (diff_v(l,n),
+     &          l=(nn-1)*200+1,nn*200)
+            endif
+         enddo
       enddo
 C$OMP END PARALLEL DO
 
@@ -598,8 +609,7 @@ C$OMP END PARALLEL DO
                      v_diff(l) = v_temp(i_ind,j_ind,k_ind)-v_p(l,1)
 
                   end do
-                  write(666,'(200ES16.8)') rtime,y_c(1),v_c(1),
-     &                 (v_diff(l),l=1,n_l(1))
+
 !                  write(777,'(200ES16.8)') rtime,y_c(1),v_c(1),
 !     &                 (v_p(l,1),l=1,n_l(1))
 
@@ -635,10 +645,13 @@ C$OMP END PARALLEL DO
                if(lclip_oz) then
                   torq_v(3) = 0.0D0
                endif
-!     regid body assumption
-               torq_v = rho_f*rho_p/(rho_p-rho_f)*torq_v
-               call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
-     &              torq_v,I_ellip,t_step)
+               if(lsphere) then
+                  call part_rotation2(om_ellip, torq_v,I_ellip,t_step)
+               else
+                  torq_v = rho_f*rho_p/(rho_p-rho_f)*torq_v
+                  call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
+     &                 torq_v,I_ellip,t_step)
+               endif
             endif
          else
             call part_inner_integral(u_temp,v_temp,w_temp,

@@ -61,6 +61,6 @@ cc Multiplying Mi(inverse) and ibme
       enddo
 c      call dgemm('N','N',3,1,3,1.d0,Mi,3,
 c     &                   ibme,3,0.d0,ibmb,3)
-c      write(117,*) ibmb(1),ibmb(2),ibmb(3)
+      write(117,*) ibmb(1),ibmb(2),ibmb(3)
       return
       END SUBROUTINE modified_windows_fn

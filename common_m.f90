@@ -111,9 +111,11 @@ module common_m
   real*8,allocatable,dimension(:,:,:) ::  forcing_x,forcing_y,forcing_z,ddf_dum
   real*8,allocatable,dimension(:,:,:) ::  forcing_x1,forcing_y1,forcing_z1
   real*8,allocatable,dimension(:,:,:) ::  forcing_x2,forcing_y2,forcing_z2
-  real*8,allocatable,dimension(:,:,:) :: forcing_x0,forcing_y0,forcing_z0
+  real*8,allocatable,dimension(:,:,:) ::  forcing_x3,forcing_y3,forcing_z3
+
   real*8,allocatable,dimension(:,:,:) :: forcing_x01,forcing_y01,forcing_z01
   real*8,allocatable,dimension(:,:,:) :: forcing_x02,forcing_y02,forcing_z02
+  real*8,allocatable,dimension(:,:,:) :: forcing_x03,forcing_y03,forcing_z03
   
   real*8,allocatable,dimension(:,:,:,:,:) ::  ddf
 
@@ -223,11 +225,13 @@ contains
     !     common variables used by the ibm
     allocate(   xets(nx0),yets(ny0),xets4(-1:nx0+1),yets4(-1:ny0+1) )
     allocate(   forcing_x(nx0,ny0,nz),forcing_y(nx0,ny0,nz),forcing_z(nx0,ny0,nz) )
-    allocate(   forcing_x0(nx0,ny0,nz),forcing_y0(nx0,ny0,nz),forcing_z0(nx0,ny0,nz) )
+    
     allocate(   forcing_x1(nx0,ny0,nz),forcing_y1(nx0,ny0,nz),forcing_z1(nx0,ny0,nz) )
-    allocate(   forcing_x01(nx0,ny0,nz),forcing_y01(nx0,ny0,nz),forcing_z01(nx0,ny0,nz) )
     allocate(   forcing_x2(nx0,ny0,nz),forcing_y2(nx0,ny0,nz),forcing_z2(nx0,ny0,nz) )
+    allocate(   forcing_x3(nx0,ny0,nz),forcing_y3(nx0,ny0,nz),forcing_z3(nx0,ny0,nz) )
+    allocate(   forcing_x01(nx0,ny0,nz),forcing_y01(nx0,ny0,nz),forcing_z01(nx0,ny0,nz) )
     allocate(   forcing_x02(nx0,ny0,nz),forcing_y02(nx0,ny0,nz),forcing_z02(nx0,ny0,nz) )
+    allocate(   forcing_x03(nx0,ny0,nz),forcing_y03(nx0,ny0,nz),forcing_z03(nx0,ny0,nz) )
     
     allocate(   ddf(n_ll,num_p,3,3,4),ddf_dum(nx,ny,nz) )
 

@@ -35,13 +35,15 @@ c
 cccccccccccccccccccccccccccc GA cccccccccccccccc
 c 1 to turn on ibm, 0 for off
       flagibm=iflag_ibm
-c 1 for compact 0 for spectral in x direction
-      css=0
-c 1 for compact 0 for spectral in y direction
-      scs=0
-c 1 for compact 0 for spectral in z direction
-      ssc=0
-      open(unit=100, file='schemes')
+      if(aalpha .eq.0) then
+         css = 0                ! spectral in x direction
+         scs = 0                ! spectral in y direction
+         ssc = 0                ! spectral in z direction
+      else
+         css = 1                ! compact in x direction
+         scs = 1                ! compact in y direction
+         ssc = 1                ! compact in z direction
+      endif
 cccccccccccccccccccccccccccc GA
       if (FLTIMER) call begin_timer(10)
 c  set write and read format
@@ -377,7 +379,6 @@ c
           wavex(nx+2-i) = -xk*wavex_ratio(i)
           wavexs(nx+2-i) = wavex(nx+2-i)**2
         enddo
-      write(100,*) 'x compact'
       endif
 ccccccccccccccccccccccccccccccccccccccccccccc GA       
 c     css=0 will have spectral scheme in the x direction
@@ -389,7 +390,6 @@ c     css=0 will have spectral scheme in the x direction
           wavex(nx+2-i) = -xk
           wavexs(nx+2-i) = xk**2
         enddo
-      write(100,*) 'x spectral'
       endif
 c
       do j=1,ny
@@ -415,7 +415,6 @@ c
           wavey(ny+2-j) = -yk*wavey_ratio(j)
           waveys(ny+2-j) = wavey(ny+2-j)**2
         enddo
-      write(100,*) 'y compact'
       endif
 ccccccccccccccccccccccccccccccccccccccccccccc GA
 c     scs=0 will have spectral scheme in the y direction
@@ -427,7 +426,6 @@ c     scs=0 will have spectral scheme in the y direction
           wavey(ny+2-j) = -yk
           waveys(ny+2-j) = yk**2
         enddo
-      write(100,*) 'y spectral'
       endif
 c
       write(26,107)(i,wavex(i),i=1,nx)
@@ -625,7 +623,6 @@ c
         chbd1(1,1)   = (2.d0*dble(nzm**2)+1.d0)/6.d0
         chbd1(nz,nz) = -chbd1(1,1)
 c
-      write(100,*) 'z spectral'
       endif
 ccccccccccccccccccccccccccccccccccccccccccccc GA ccccccccccccccccccccc
 c--------------------------------------------------------
@@ -811,7 +808,6 @@ c
       call dgemm('N','N',nz,nz,nz,1.d0,L1z,nz,
      &                   R1z,nz,0.d0,chbd1,nz0)
 c
-      write(100,*) 'z compact'
       endif
       close(unit=100)
 ccccccccccccccccccccccccccccccccccccccccccccc GA

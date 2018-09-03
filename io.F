@@ -95,30 +95,19 @@ c
          close(375)
          
          open(375,file=anum('forcing_xyz3',itime),form=format_mode)
-         call fft_f2r_2d_new(forcing_x)
-         call fft_f2r_2d_new(forcing_y)
-         call fft_f2r_2d_new(forcing_z)
-         write(375) forcing_x,forcing_y,forcing_z
+         write(375) forcing_x3,forcing_y3,forcing_z3
          close(375)
 
          open(376,file=anum('forcing_xyz01',itime),form=format_mode)
-         call fft_f2r_2d_new(forcing_x01)
-         call fft_f2r_2d_new(forcing_y01)
-         call fft_f2r_2d_new(forcing_z01)
          write(376) forcing_x01,forcing_y01,forcing_z01
          close(376)
+
          open(376,file=anum('forcing_xyz02',itime),form=format_mode)
-         call fft_f2r_2d_new(forcing_x02)
-         call fft_f2r_2d_new(forcing_y02)
-         call fft_f2r_2d_new(forcing_z02)
          write(376) forcing_x02,forcing_y02,forcing_z02
          close(376)
          
-         open(376,file=anum('forcing_xyz0',itime),form=format_mode)
-         call fft_f2r_2d_new(forcing_x0)
-         call fft_f2r_2d_new(forcing_y0)
-         call fft_f2r_2d_new(forcing_z0)
-         write(376) forcing_x0,forcing_y0,forcing_z0
+         open(376,file=anum('forcing_xyz03',itime),form=format_mode)
+         write(376) forcing_x03,forcing_y03,forcing_z03
          close(376)
       endif
 !<<<
