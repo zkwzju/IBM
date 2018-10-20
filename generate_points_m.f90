@@ -8,7 +8,7 @@ contains
     integer  :: i1,i2,j1,j2,k1,k2
     integer  :: np
 
-    write(*,*) 'generate_points begin ------'
+!    write(*,*) 'generate_points begin ------'
 
     do n=1,num_p
        select case(imethod)

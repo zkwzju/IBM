@@ -51,7 +51,7 @@ FFTWLIBDIR = ${FFTWDIR}/lib
 LIBS       = -L${FFTWLIBDIR} -lfftw3 -L${MKLLIBDIR} -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 FLAGS      =  -shared-intel -fpp -traceback -DIFC -DFFTW3 -I${FFTWDIR}/include
 DEBUGFLAGS = -g -C -traceback
-OPTFLAGS   = -O2
+OPTFLAGS   = -O2 -heap-arrays
 MPFLAGS    = -qopenmp -D OPENMP
 FCMP       = ifort
 FCSP       = ifort
@@ -110,7 +110,7 @@ post_ellip.o  : ellipsoid_m.o
 global_m.o    : parser_m.o
 common_m.o    : global_m.o flags_m.o fft_m.o timers_m.o fft_m.o common_m.f90
 fft_m.o	      : global_m.o fft_m.F
-init_m.o      : common_m.o init_m.f90
+init_m.o      : common_m.o init_m.f90 ellipsoid_m.o
 p_dyn_m.o     : rotation_m.o common_m.o ellip_common_m.o p_dyn_m.f90
 advance.o     : common_m.o ellip_common_m.o p_dyn_m.o
 main.o	      : init_m.o ellipsoid_m.o main.F

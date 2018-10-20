@@ -79,49 +79,60 @@ contains
 
   end subroutine torq_on_particle
   ! -------------------------------------------------- !
-  subroutine part_inner_integral(u,v,w,int_u,int_v,int_w,int_r_u,int_r_v,int_r_w)
-    use common_m,only:xets,yets,zets,deltax,deltay,deltaz,x_c,y_c,z_c,num_p,cell_v,nx0,ny0,nz,nx,ny
+  subroutine part_inner_integral(u,v,w,int_u,int_v,int_w,int_r_u,int_r_v,int_r_w,n)
+    use common_m,only:xets,yets,zets,deltax,deltay,deltaz,x_c,y_c,z_c,num_p,cell_v,nx0,ny0,nz,nx,ny,num_p
     use ellip_common_m,only:xa,xb,xc,x_0,x_1,y_0,y_1,z_0,z_1
-    real(wp), intent(in)  :: u(nx0,ny0,nz),v(nx0,ny0,nz),w(nx0,ny0,nz)
-    real(wp), intent(out) :: int_u(num_p),int_v(num_p),int_w(num_p),int_r_u(num_p),int_r_v(num_p),int_r_w(num_p)
-    integer :: n,i,j,k,id,jd
+    real(wp), intent(in)  :: u(:,:,:),v(:,:,:),w(:,:,:)
+    real(wp), intent(out) :: int_u,int_v,int_w,int_r_u,int_r_v,int_r_w
+    integer, intent(in)   :: n
+    integer :: i,j,k,id,jd
     real(wp) :: alpha,alpha_v,rx,ry,rz
 
-    !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n)
-    do n=1,num_p
-       do i=x_0(n),x_1(n)
-          if(i<1) then
-             id = i+nx
+
+    int_u = 0.0_wp
+    int_v = 0.0_wp
+    int_w = 0.0_wp
+    int_r_u = 0.0_wp
+    int_r_v = 0.0_wp
+    int_r_w = 0.0_wp
+
+    
+    !$OMP PARALLEL DO PRIVATE(i,j,k)
+    do i=x_0(n),x_1(n)
+       if(i<1) then
+          id = i+nx
+       elseif(i>nx) then
+          id = i-nx
+       else
+          id = i
+       end if
+
+       do j=y_0(n),y_1(n)
+          if(j<1) then
+             jd = j+ny
           elseif(i>nx) then
-             id = i-nx
+             jd = j-ny
           else
-             id = i
+             jd = j
           end if
-          
-          do j=y_0(n),y_1(n)
-             if(j<1) then
-                jd = j+ny
-             elseif(i>nx) then
-                jd = j-ny
-             else
-                jd = j
-             end if
-             do k=z_0(n),z_1(n)
-                call volume_fraction(xets(id),yets(jd),zets(k),deltax,deltay,deltaz(k),x_c(n),y_c(n),z_c(n),xa,xb,xc,alpha)
-                alpha_v = alpha*cell_v(k)
-                int_u(n) = int_u(n) + u(id,jd,k)*alpha_v
-                int_v(n) = int_v(n) + v(id,jd,k)*alpha_v
-                int_w(n) = int_w(n) + w(id,jd,k)*alpha_v
-                rx = xets(id) - x_c(n)
-                ry = yets(jd) - y_c(n)
-                rz = zets(k ) - z_c(n)
-                int_r_u(n) = int_r_u(n) + rx*w(id,jd,k) - rz*v(id,jd,k)*alpha_v
-                int_r_v(n) = int_r_v(n) + rz*u(id,jd,k) - rx*w(id,jd,k)*alpha_v
-                int_r_w(n) = int_r_w(n) + rx*v(id,jd,k) - ry*u(id,jd,k)*alpha_v
-             end do 
-          end do 
-       end do 
-    end do 
+
+          do k=z_0(n),z_1(n)
+             call volume_fraction(xets(id),yets(jd),zets(k),deltax,deltay,deltaz(k),x_c(n),y_c(n),z_c(n),xa,xb,xc,alpha)
+
+             alpha_v = alpha*cell_v(k)
+
+             int_u = int_u + u(id,jd,k)*alpha_v
+             int_v = int_v + v(id,jd,k)*alpha_v
+             int_w = int_w + w(id,jd,k)*alpha_v
+             rx = xets(id) - x_c(n)
+             ry = yets(jd) - y_c(n)
+             rz = zets(k ) - z_c(n)
+             int_r_u = int_r_u + (rx*w(id,jd,k) - rz*v(id,jd,k))*alpha_v
+             int_r_v = int_r_v + (rz*u(id,jd,k) - rx*w(id,jd,k))*alpha_v
+             int_r_w = int_r_w + (rx*v(id,jd,k) - ry*u(id,jd,k))*alpha_v
+          end do
+       end do
+    end do
     !$OMP END PARALLEL DO         
   end subroutine part_inner_integral
   
@@ -149,9 +160,10 @@ contains
     phi7 = sqrt(factor + (2*dx*(x-xc)+dx**2)/a2 + (2*dy*(y-yc)+dy**2)/b2) - 1.0_wp
     phi8 = sqrt(factor + (2*dy*(y-yc)+dy**2)/b2) - 1.0_wp
 
+
     factor = abs(phi1)+abs(phi2)+abs(phi3)+abs(phi4)+abs(phi5)+abs(phi6)+abs(phi7)+abs(phi8)
     alpha = (-phi1*H(-phi1)-phi2*H(-phi2)-phi3*H(-phi3)-phi4*H(-phi4)-phi5*H(-phi5)-phi6*H(-phi6)-phi7*H(-phi7)-phi8*H(-phi8)) / factor
-    
+
   end subroutine volume_fraction
   ! -------------------------------------------------- !
   ! Heaviside function

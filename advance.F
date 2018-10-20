@@ -1,7 +1,7 @@
       SUBROUTINE advance(code)
       use common_m
       use ellip_common_m
-
+      use p_dyn_m
       implicit none
       
       INTEGER code
@@ -26,17 +26,15 @@ c
       do irk = 1,3
         irkk=irk
         if (FLTIMER) call begin_timer(42)
-c
-!>>>
-!        if(lcheck .and. irk .eq.1) then
-!u_temp = u
+
+        if(lcheck .or. (.not. lrigid)) then
+           u_temp = u
            v_temp = v
-!w_temp = w
-!call fft_f2r_2d_new(u_temp)
+           w_temp = w
+           call fft_f2r_2d_new(u_temp)
            call fft_f2r_2d_new(v_temp)
-!call fft_f2r_2d_new(w_temp)
-!        end if
-!<<<
+           call fft_f2r_2d_new(w_temp)
+        end if
         
         cfnl1   = cfnl1v(irk)
         cfnl2   = cfnl2v(irk)
@@ -164,10 +162,15 @@ c     solve the helmholtz equation for tt
         if(flagibm  .and. frac_step>0.D0) then
            t_step = frac_step*dtcr
            
-           if(ibm_moving .eq.1) then
-              call particle_motion(dt,t_step,irk)
-           elseif(ibm_moving .eq. 0)then
-              call cal_u_diff(irk)
+           if(ibm_moving .eq.1) call particle_motion(dt,t_step,irk)
+           if(lcheck)   call cal_u_diff(irk)
+           if(.not. lrigid) then
+              do n=1,num_p
+                 call part_inner_integral(u_temp,v_temp,w_temp,
+     &                int_u1(n),int_v1(n),int_w1(n),
+     &                int_r_u1(n),int_r_v1(n),int_r_w1(n),n)
+              enddo
+              call body_integration_output(irk)
            endif
         endif
         !<<<
@@ -394,11 +397,17 @@ C$OMP END PARALLEL DO
 !     particle dynamics after pressure correction for fluid
         if(flagibm  .and. frac_step<1.0D0) then
            t_step = (1.0D0-frac_step)*dtcr
-           if(ibm_moving .eq.1) then
-              call particle_motion(dt,t_step,irk)
-           elseif(ibm_moving .eq. 0)then
-              call cal_u_diff(irk)
-           endif
+           
+           if(ibm_moving .eq.1)  call particle_motion(dt,t_step,irk)
+           if(lcheck)   call cal_u_diff(irk)
+           if(.not. lrigid) then
+              do n=1,num_p
+                 call part_inner_integral(u_temp,v_temp,w_temp,
+     &                int_u1(n),int_v1(n),int_w1(n),
+     &                int_r_u1(n),int_r_v1(n),int_r_w1(n),n)
+                 call body_integration_output(irk)
+              enddo
+            endif
         endif
 !<<<
       enddo                     !irk
@@ -468,7 +477,7 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
          
          nblock=ceiling(n_ll/200.0d0)
          nremain=mod(n_ll,200)
-         write(666,'(ES16.8)') rtime
+         write(666,'(ES16.8)',advance='no') rtime
          do nn=1,nblock
             if(nn .eq. nblock) then
                write(666,'(<nremain>ES16.8)') (diff_v(l,n),
@@ -483,7 +492,66 @@ C$OMP END PARALLEL DO
 
       
       end subroutine
-! -------------------------------------------------- ~
+
+! -------------------------------------------------- !
+      subroutine body_integration_output(irk)
+      use common_m
+      use ellipsoid_m
+      use ellip_common_m
+      implicit none
+
+      integer irk
+      integer nblock,nremain,nn,l
+
+      if(irk .eq. 1 .or. irk .eq. 2) return  ! write if only irk=3
+      nblock=ceiling(num_p/100.0d0)
+      nremain=mod(num_p,100)
+      write(301,'(I10)',advance='no') itime
+      write(302,'(I10)',advance='no') itime
+      write(303,'(I10)',advance='no') itime
+
+      do nn=1,nblock
+         if(nn .eq. nblock) then
+            write(301,'(<nremain>ES16.8)')  (int_u1(l),
+     &           l=(nn-1)*100+1,num_p)
+            write(302,'(<nremain>ES16.8)')  (int_v1(l),
+     &           l=(nn-1)*100+1,num_p)
+            write(303,'(<nremain>ES16.8)')  (int_w1(l),
+     &           l=(nn-1)*100+1,num_p)
+         else
+            write(301,'(100ES16.8)') (int_u1(l),
+     &           l=(nn-1)*100+1,nn*100)
+            write(302,'(100ES16.8)') (int_v1(l),
+     &           l=(nn-1)*100+1,nn*100)
+            write(303,'(100ES16.8)') (int_w1(l),
+     &           l=(nn-1)*100+1,nn*100)
+         endif
+      enddo
+      if(lrotation) then
+         write(304,'(I10)') itime
+         write(305,'(I10)') itime
+            write(306,'(I10)') itime
+            do nn=1,nblock
+               if(nn .eq. nblock) then
+                  write(304,'(<nremain>ES16.8)')  (int_r_u1(l),
+     &                 l=(nn-1)*100+1,num_p)
+                  write(305,'(<nremain>ES16.8)')  (int_r_v1(l),
+     &                 l=(nn-1)*100+1,num_p)
+                  write(306,'(<nremain>ES16.8)')  (int_r_w1(l),
+     &                 l=(nn-1)*100+1,num_p)
+               else
+                  write(304,'(100ES16.8)') (int_r_u1(l),
+     &                 l=(nn-1)*100+1,nn*100)
+                  write(305,'(100ES16.8)') (int_r_v1(l),
+     &                 l=(nn-1)*100+1,nn*100)
+                  write(306,'(100ES16.8)') (int_r_w1(l),
+     &                 l=(nn-1)*100+1,nn*100)
+               endif
+            enddo
+         endif
+
+      end subroutine body_integration_output
+! -------------------------------------------------- !
       subroutine weighted_fluid_vel(weight_v)
       use common_m
       use ellip_common_m,only:x_0,x_1,y_0,y_1,z_0,z_1
@@ -550,15 +618,7 @@ C$OMP END PARALLEL DO
       
       it_step = 1.0D0/t_step
       
-      if(lcheck .and. irk .eq.1) then
-         !u_temp = u
-         v_temp = v
-         !w_temp = w
-         !call fft_f2r_2d_new(u_temp)
-         call fft_f2r_2d_new(v_temp)
-         !call fft_f2r_2d_new(w_temp)
-      end if
-
+!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n)
       do n=1,num_p
 
          om_ellip(1) = om_x(n)
@@ -579,43 +639,6 @@ C$OMP END PARALLEL DO
 
          if(lrigid) then
            
-            if(lcheck) then
-               if(irk .eq. 1) then
-!                  call weighted_fluid_vel(weight_v)
-                  do l=1,n_l(1)
-                     do i=1,nx
-                        if(x_o(l,1) .ge. xets(i) .and.
-     &                       x_o(l,1) .lt. xets(i+1) ) then
-                           i_ind = i
-                           exit
-                        end if
-                     end do
-                     do j=1,ny
-                        if(y_o(l,1) .ge. yets(j) .and.
-     &                       y_o(l,1) .lt. yets(j+1) ) then
-                           j_ind = j
-                           exit
-                        end if
-                     end do
-
-                     do k=1,nz-1
-                        if(z_o(l,1) .lt. zets(k) .and.
-     &                       z_o(l,1) .ge. zets(k+1) ) then
-                           k_ind = k
-                           exit
-                        end if
-                     end do
-                     
-                     v_diff(l) = v_temp(i_ind,j_ind,k_ind)-v_p(l,1)
-
-                  end do
-
-!                  write(777,'(200ES16.8)') rtime,y_c(1),v_c(1),
-!     &                 (v_p(l,1),l=1,n_l(1))
-
-               endif
-            endif
-            
             if(ltranslation) then
                F_v(1) = - for_px(n)*(delta_t/t_step) ! stupid definition
                F_v(2) = - for_py(n)*(delta_t/t_step) ! in direct forcing 
@@ -628,14 +651,14 @@ C$OMP END PARALLEL DO
                   F_v(2) = 0.0D0
                endif
                if(lclip_z) then
-                  F_v(2) = 0.0D0
+                  F_v(3) = 0.0D0
                endif
                call part_translation2(xp3,up3,F_v,grav,vol_ellip,t_step)
             endif
             if(lrotation) then
                torq_v(1) = - torq_x(n)*(delta_t/t_step) ! stupid definition
                torq_v(2) = - torq_y(n)*(delta_t/t_step) ! in direct forcing
-               torq_v(3) = - torq_z(n)*(delta_t/t_step) ! check ?
+               torq_v(3) = - torq_z(n)*(delta_t/t_step) ! 
                if(lclip_ox) then
                   torq_v(1) = 0.0D0
                endif
@@ -654,33 +677,57 @@ C$OMP END PARALLEL DO
                endif
             endif
          else
-            call part_inner_integral(u_temp,v_temp,w_temp,
-     &           int_u1(n),int_v1(n),int_w1(n),
-     &           int_r_u1(n),int_r_v1(n),int_r_w1(n))
+            if(ltranslation) then
+               F_v(1) = (int_u1(n)-int_u0(n))*it_step
+               F_v(2) = (int_v1(n)-int_v0(n))*it_step
+               F_v(3) = (int_w1(n)-int_w0(n))*it_step
 
-            F_v(1) = (int_u1(n)-int_u0(n))*it_step 
-            F_v(2) = (int_v1(n)-int_v0(n))*it_step
-            F_v(3) = (int_w1(n)-int_w0(n))*it_step
-            torq_v(1) = (int_r_u1(n)-int_r_u0(n))*it_step
-            torq_v(2) = (int_r_v1(n)-int_r_v0(n))*it_step
-            torq_v(3) = (int_r_w1(n)-int_r_w0(n))*it_step
-            F_v(1) = F_v(1) - for_px(n)
-            F_v(2) = F_v(2) - for_py(n)
-            F_v(3) = F_v(3) - for_pz(n)
-            
-            call part_translation(xp3,up3,F_v,grav,vol_ellip,t_step)
-            torq_v(1) = torq_v(1) - torq_x(n)
-            torq_v(2) = torq_v(2) - torq_y(n)
-            torq_v(3) = torq_v(3) - torq_z(n)
-c     !call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
-c     !&           torq_v,I_ellip,t_step)
+               F_v(1) = F_v(1) - for_px(n)*(delta_t/t_step)
+               F_v(2) = F_v(2) - for_py(n)*(delta_t/t_step)
+               F_v(3) = F_v(3) - for_pz(n)*(delta_t/t_step)
+
+               if(lclip_x) then
+                  F_v(1) = 0.0D0
+               endif
+               if(lclip_y) then
+                  F_v(2) = 0.0D0
+               endif
+               if(lclip_z) then
+                  F_v(3) = 0.0D0
+               endif
+               call part_translation(xp3,up3,F_v,grav,vol_ellip,t_step)
+            endif
+
+            if(lrotation) then
+               torq_v(1) = (int_r_u1(n)-int_r_u0(n))*it_step
+               torq_v(2) = (int_r_v1(n)-int_r_v0(n))*it_step
+               torq_v(3) = (int_r_w1(n)-int_r_w0(n))*it_step
+
+               torq_v(1) = torq_v(1) - torq_x(n)*(delta_t/t_step)
+               torq_v(2) = torq_v(2) - torq_y(n)*(delta_t/t_step)
+               torq_v(3) = torq_v(3) - torq_z(n)*(delta_t/t_step)
+               if(lclip_ox) then
+                  torq_v(1) = 0.0D0
+               endif
+               if(lclip_oy) then
+                  torq_v(2) = 0.0D0
+               endif
+               if(lclip_oz) then
+                  torq_v(3) = 0.0D0
+               endif
+               if(lsphere) then
+                  call part_rotation2(om_ellip, torq_v,I_ellip,t_step)
+               else
+                  call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
+     &                 torq_v,I_ellip,t_step)
+               endif
+            endif
             int_u0(n) = int_u1(n)
             int_v0(n) = int_v1(n)
             int_w0(n) = int_w1(n)
             int_r_u0(n) = int_r_u1(n)
             int_r_v0(n) = int_r_v1(n)
             int_r_w0(n) = int_r_w1(n)
-
          endif
                
   
@@ -702,5 +749,6 @@ c     !&           torq_v,I_ellip,t_step)
          om_z(n) = om_ellip(3)
          
       enddo
+!$OMP END PARALLEL DO  
       return
       end subroutine particle_motion

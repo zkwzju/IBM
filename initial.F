@@ -1267,10 +1267,10 @@ c
          if(.not. lrigid) then
             do n=1,num_p
                call part_inner_integral(u,v,w,int_u0(n),int_v0(n),
-     &              int_w0(n),int_r_u0(n),int_r_v0(n),int_r_w0(n))
+     &              int_w0(n),int_r_u0(n),int_r_v0(n),int_r_w0(n),n)
             enddo
          endif
-         endif
+      endif
       
       if(m_fin.eq.0)then
          do i=1,np
@@ -1390,9 +1390,9 @@ c      condi = condi*evi( idmax(n, evi,1))
       condi = condi*evi( auxidmax(n, evi,1))
 c
       if (i0.eq.0.and.i1.eq.0.and.i2.eq.0.and.i3.eq.0) return
-      write(26,*) 'error in e_decomp'
-      write(26,*) 'i0, i1, i2, i3:',i0,i1,i2,i3
-      print *, 'error in e_decomp'
+c      write(26,*) 'error in e_decomp'
+c      write(26,*) 'i0, i1, i2, i3:',i0,i1,i2,i3
+c      print *, 'error in e_decomp'
 c      stop
       END
 c

@@ -7,7 +7,7 @@ module init_m
 contains
   subroutine initialization
     use parser_m
-
+    use ellipsoid_m
     print *, 'Program running'
 
 
@@ -99,8 +99,9 @@ contains
 
 
     open(26,file='logfile')
-    call initial(dt0,ch_fin,m_fin)
-
+    call initial(dt0,ch_fin,m_fin)  ! initialization of IBM related
+    call correlation(n_ll)          ! to check weight if too big
+    
     ! output grid
     open(100,file='grid.dat')
     write(100,*) 'x',nx+1
@@ -162,5 +163,16 @@ contains
     open(unit=1120, file='velocity_x')      ! particle velocity
     open(unit=1121, file='velocity_y')      ! particle velocity
     open(unit=1122, file='velocity_z')      ! particle velocity
+
+    if(.not. lrigid)  then ! integration of vel inside particle wt rigid body assumption
+       open(unit=301,file='body_int_u',STATUS='UNKNOWN')
+       open(unit=302,file='body_int_v',STATUS='UNKNOWN')
+       open(unit=303,file='body_int_w',STATUS='UNKNOWN')
+       if(lrotation) then
+          open(unit=304,file='body_int_r_u',STATUS='UNKNOWN')
+          open(unit=305,file='body_int_r_v',STATUS='UNKNOWN')
+          open(unit=306,file='body_int_r_w',STATUS='UNKNOWN')
+       endif
+    endif
   end subroutine initialization
 end module init_m

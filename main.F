@@ -220,8 +220,8 @@ c     all done with one complete time step
       enddo!itime
 ccccccccccccccccccccccccccccccccccccccccccccc
 c      write(40,110) (zets(k),u(nxh,nyh,k),k=1,nz)
-      write(40,111) (zets(k),vm( k,1)/dble(NT(1)),
-     &                       ttm(k,1)/dble(NT(1)),k=1,nz)
+!      write(40,111) (zets(k),vm( k,1)/dble(NT(1)),
+!     &                       ttm(k,1)/dble(NT(1)),k=1,nz)
 c      write(40,111) (zets(k)+rlenz/2.d0,v(1,1,k),dsin(rtime)
 c     &-exp(-(zets(k)+rlenz/2.d0)*sqrt(re/2.d0))*dsin(rtime
 c     &-(zets(k)+rlenz/2.d0)*sqrt(re/2.d0)),k=1,nz)

@@ -63,8 +63,12 @@ contains
     call parser_read('Particle initial location (z)',z0,0.0_wp);
 
     do n=1,num_p
-       x_c(n) = x0
-       y_c(n) = y0
+       if(x0 <0 .or. y0<0 .or. z0 > rlenz/2.0_wp .or. z0 < -rlenz/2.0_wp) then
+          write(*,*) "Particle is initially outside of the channel!"
+          stop
+       endif
+       x_c(n) = mod(x0,rlenx)
+       y_c(n) = mod(y0,rleny)
        z_c(n) = z0
     end do
   end subroutine init_location
@@ -196,7 +200,7 @@ contains
 
     call parser_read('Lagrangian weights file',sname_w,'lagrangian_weights.dat')
 
-    write(*,*) 'initialize_ellip done'
+!    write(*,*) 'initialize_ellip done'
   end subroutine initialize_ellip
   ! ------------------------------------------------------------ !
 
@@ -271,7 +275,7 @@ contains
     integer  :: np,n,i,j,l
     real(wp) :: A(3,3), xyzc
 
-    !$OMP PARALLEL DO DEFAULT(SHARED)
+    !$OMP PARALLEL DO DEFAULT(SHARED),private(n)
     do n=1,num_p
        A(:,1) = axis_1(:,n)
        A(:,2) = axis_2(:,n)
@@ -364,7 +368,7 @@ contains
        y_1(n) = p_jn(1,n)
        z_0(n) = p_kb(1,n)
        z_1(n) = p_kt(1,n)
-
+       
        do l=2,n_l(n)
           x_0(n) = min(p_iw(l,n),x_0(n))
           x_1(n) = max(p_ie(l,n),x_1(n))
@@ -449,13 +453,12 @@ contains
 
 
   ! -------------------------------------------------- !
-  subroutine correlation(nlm,vol)
+  subroutine correlation(nlm)
     use common_m
 
     implicit none
 
     integer, intent(in) :: nlm
-    real(wp),intent(in) :: vol(nz)
     integer :: l1,i11,i21,j11,j21,k11,k21
     integer :: l2,i12,i22,j12,j22,k12,k22,i1,i2,j1,j2,k1,k2
     integer :: i_ddf1,i_ddf2,j_ddf1,j_ddf2,k_ddf1,k_ddf2
@@ -468,11 +471,19 @@ contains
     real(wp) :: corr_A(nlm,nlm)
     real(wp) :: mat_G(nlm,nlm),mat_Gsum(nlm,nlm)
     real(wp) :: vec_V(nlm),vec_Vt(1,nlm)
+    real(wp) :: inv_mass_non
+
 
     lwork = 3*n_ll-1
     corr_A = 0.0_wp
     mat_Gsum = 0.0_wp
     
+    if(ibm_moving .eq. 0) then
+       inv_mass_non = 0.0_wp
+    else
+       inv_mass_non = (rho_f*deltax*deltay*maxval(deltaz))/(vol_ellip * rho_p)
+    endif
+   
     do n=1,num_p
        nl = n_l(n)
        do l1=1,nl
@@ -506,7 +517,7 @@ contains
                    do k=k1,k2
                       k_ddf1=k-k11+1
                       k_ddf2=k-k12+1
-                      corr_A(l1,l2)=corr_A(l1,l2)+ddf(l1,n,i_ddf1,j_ddf1,k_ddf1)*ddf(l2,n,i_ddf2,j_ddf2,k_ddf2)*vol(k)**2
+                      corr_A(l1,l2)=corr_A(l1,l2)+ddf(l1,n,i_ddf1,j_ddf1,k_ddf1)*ddf(l2,n,i_ddf2,j_ddf2,k_ddf2)
                    end do
                 enddo
              enddo
@@ -514,9 +525,10 @@ contains
           end do
        end do
 
-
+       corr_A = corr_A + inv_mass_non       ! motion correction 
+       
        call DSYEV('V','U',nlm,corr_A,nlm,eig_A, work, lwork, info)
-
+       
        if(info .eq. 3) then
 
           n_eig = count(eig_A .gt. 1.0e-3_wp,dim=1)
@@ -535,15 +547,17 @@ contains
              write(*,*) mat_G
 
           end do
-
-          
-          write(*,*) 'hi'
-          stop
-       else
-          write(*,*) 'Eigenvalue failed: correlation matrix'
-          stop
        end if
+
+       if(scale_dv>2.51_wp/maxval(eig_A)) then
+          write(*,*) 'The maximum eigenvalue in the correlation matrix is:', maxval(eig_A)
+          write(*,*) 'Warning: violation of stability condition, too big weight!'
+          write(*,*) scale_dv,'>',2.51_wp/maxval(eig_A)
+          write(*,*) '!!!!!!!!!!!!!!!!!!'
+       endif
     end do
+
+
   end subroutine correlation
 
   ! -------------------------------------------------- !
