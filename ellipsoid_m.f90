@@ -82,7 +82,7 @@ contains
     real(wp) :: p,mass 
     integer  :: imove
     integer  :: i,Np
-    logical  :: lflag,laxis1,laxis2,laxis3
+    logical  :: lflag,laxis1,laxis2,laxis3,linertia
     real(wp) :: axis1(3),axis2(3),axis3(3)
 
     ! particle orientation vetors
@@ -99,10 +99,16 @@ contains
     vol_ellip = 4.0_wp/3.0_wp*pi*xa*xb*xc     ! ellipsoid volume
     mass = vol_ellip * rho_p
 
-    ! inertial of ellipsoid
+    ! inertia of ellipsoid
     I_ellip(1) = mass/5.0_wp * (xb**2 + xc**2)
     I_ellip(2) = mass/5.0_wp * (xa**2 + xc**2)
     I_ellip(3) = mass/5.0_wp * (xa**2 + xb**2)
+
+    ! to read rotational inertial
+    call parser_is_defined('Rotational inertia',linertia)
+    if(linertia) then
+       call parser_read('Rotational inertia',I_ellip)
+    end if
 
     ! initial orientation vectors
     ! axis_1

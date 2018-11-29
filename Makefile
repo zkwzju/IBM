@@ -37,7 +37,7 @@ LIBS       = -L${MKLLIBDIR} \
 FLAGS      = -mcmodel=medium -shared-intel -fpp -DIFC -DFFTW3 -I${MKLFFTWINC}
 DEBUGFLAGS = -g -C -traceback
 OPTFLAGS   = -O2 -mavx -axsse3,sse4.1,sse4.2
-MPFLAGS    = -gopenmp -D OPENMP
+MPFLAGS    = -qopenmp -D OPENMP
 FCMP       = ifort
 FCSP       = ifort
 endif

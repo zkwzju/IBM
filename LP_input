@@ -36,7 +36,7 @@ clip y rotation         : 1     ! default 0
 clip z rotation         : 1     ! default 0
 
 
-
+Rotational inertia	: 1 	1	1	! for non-ellipsoid particle
 Principal axis-1 direction	: 1	0	0
 Principal axis-2 direction	: 0	1	0
 
