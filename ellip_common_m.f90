@@ -6,7 +6,7 @@ module ellip_common_m
   integer, allocatable :: x_0(:),x_1(:),y_0(:),y_1(:),z_0(:),z_1(:)
   real(wp), allocatable :: xlp(:),ylp(:),zlp(:)
   real(wp)              :: S_ellp   ! aproximate surface area
-  real(wp)              :: vol_ellip, max_len_ellip
+  real(wp)              :: vol_ellip
   real(wp)              :: om_ellip(3),om_ellip_b(3)
   real(wp)              :: I_ellip(3)
   real(wp), allocatable :: axis_1(:,:),axis_2(:,:),axis_3(:,:)

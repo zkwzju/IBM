@@ -82,7 +82,7 @@ contains
     real(wp) :: p,mass 
     integer  :: imove
     integer  :: i,Np
-    logical  :: lflag,laxis1,laxis2,laxis3,linertia
+    logical  :: lflag,laxis1,laxis2,laxis3,linertia,lvol
     real(wp) :: axis1(3),axis2(3),axis3(3)
 
     ! particle orientation vetors
@@ -95,8 +95,14 @@ contains
 
     ! setting control perameters
 
-    max_len_ellip = max(max(xa,xb),xc)
     vol_ellip = 4.0_wp/3.0_wp*pi*xa*xb*xc     ! ellipsoid volume
+
+    ! to read particle volume
+    call parser_is_defined('Particle volume',lvol)
+    if(lvol) then
+       call parser_read('Particle volume',vol_ellip)
+    end if
+
     mass = vol_ellip * rho_p
 
     ! inertia of ellipsoid
