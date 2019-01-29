@@ -43,11 +43,11 @@ contains
        stop
     end if
 
-    call parser_read('Grid nx',nx)
-    call parser_read('Grid ny',ny)
-    call parser_read('Grid nz',nz)
+    call parser_read('Grid nx',nx,100)
+    call parser_read('Grid ny',ny,100)
+    call parser_read('Grid nz',nz,100)
     call parser_read('Number of particle',num_p,1)
-    call parser_read('Max Lagrangian markers',n_ll,500)
+    call parser_read('Max Lagrangian markers',n_ll,1000)
 
     np=1
     dnp=1
@@ -98,7 +98,7 @@ contains
     nylhp0xl0=nylhp0*nxl0
     nxl0yl=nxl0*nyl
 
-    write(*,*) 'global_init done'
+!    write(*,*) 'global_init done'
 
   end subroutine global_init
 

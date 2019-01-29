@@ -8,6 +8,11 @@ contains
   subroutine initialization
     use parser_m
     use ellipsoid_m
+    implicit none
+    integer  :: reclen
+    logical  :: lviscosity
+    real(wp) :: A_size(3,3)
+    
     print *, 'Program running'
 
 
@@ -16,30 +21,35 @@ contains
     !  ch_fin = 1 reads the initial data from ch_file.(istart)
     !  outfirst = whether to output data (other than c and u) at first time-step
 
-    call parser_read('ch_file',ch_file)
-    call parser_read('sp_file',sp_file)
-    call parser_read('rlenx',rlenx)
-    call parser_read('rleny',rleny)
-    call parser_read('rlenz',rlenz)
-    call parser_read('uvbb',uvbb)
-    call parser_read('uvbt',uvbt)
-    call parser_read('istart',istart)
-    call parser_read('iters',iters)
-    call parser_read('ch_fin',ch_fin)
-    call parser_read('m_fin',m_fin)
-    call parser_read('oi_chan',oi_chan)
-    call parser_read('out_press',out_press)
-    call parser_read('oi_timer',oi_timer)
-    call parser_read('oi_cfl',oi_cfl)
-    call parser_read('oi_mean',oi_mean)
-    call parser_read('oi_spec',oi_spec)
-    call parser_read('oi_gbal',oi_gbal)
-    call parser_read('oi_1d',oi_1d)
-    call parser_read('Reynolds number',re)
-    call parser_read('Pressure gradient',ppA)
-    call parser_read('Time step dt',dt_p)
-    call parser_read('Max CFL',cflmax)
-    call parser_read('ppT',ppT)
+    call parser_read('ch_file',ch_file,'vel')
+    call parser_read('sp_file',sp_file,'sph')
+    call parser_read('rlenx',rlenx,10.0_wp)
+    call parser_read('rleny',rleny,10.0_wp)
+    call parser_read('rlenz',rlenz,10.0_wp)
+    call parser_read('uvbb',uvbb,0.0_wp)
+    call parser_read('uvbt',uvbt,0.0_wp)
+    call parser_read('istart',istart,0)
+    call parser_read('iters',iters,1000)
+    call parser_read('ch_fin',ch_fin,0)
+    call parser_read('m_fin',m_fin,0)
+    call parser_read('oi_chan',oi_chan,100)
+    call parser_read('out_press',out_press,100)
+    call parser_read('oi_timer',oi_timer,1000000)
+    call parser_read('oi_cfl',oi_cfl,100)
+    call parser_read('oi_mean',oi_mean,1000000)
+    call parser_read('oi_spec',oi_spec,1000000)
+    call parser_read('oi_gbal',oi_gbal,1000000)
+    call parser_read('oi_1d',oi_1d,1000000)
+    call parser_read('Reynolds number',re,1.0_wp)
+    call parser_is_defined('Kinematic viscosity',lviscosity)
+    if(lviscosity) then
+       call parser_read('Kinematic viscosity',re)
+       re = 1.0_wp/re                         ! re is the inverse of viscosity
+    endif
+    call parser_read('Pressure gradient',ppA,0.0_wp)
+    call parser_read('Time step dt',dt_p,0.1_wp)
+    call parser_read('Max CFL',cflmax,1.0_wp)
+    call parser_read('ppT',ppT,0.0_wp)
     call parser_read('Channel tilt angle',theta,0.d0)
     call parser_read('Including temperature',tt_yes,0)
 
@@ -72,7 +82,7 @@ contains
 !!$       endif
 !!$    endif
 
-    FLSTLE  = ws.ne.0.0
+    FLSTLE  = .false.
 
     epssvx=0.d0
     epssvy=0.d0     
@@ -149,20 +159,47 @@ contains
     open(unit=114, file='liftx')
     open(unit=115, file='drag')
     open(unit=116, file='liftz')
-    open(unit=120, file='om_x')             ! rotational velocity        
-    open(unit=121, file='om_y')
-    open(unit=122, file='om_z')
-    open(unit=123, file='moment_x')
-    open(unit=124, file='moment_y')
-    open(unit=125, file='moment_z')
 
-    open(unit=88,file='orientation_matrix')
-    open(unit=1110, file='position_x')      ! particle position
-    open(unit=1111, file='position_y')      ! particle position
-    open(unit=1112, file='position_z')      ! particle position
-    open(unit=1120, file='velocity_x')      ! particle velocity
-    open(unit=1121, file='velocity_y')      ! particle velocity
-    open(unit=1122, file='velocity_z')      ! particle velocity
+
+
+    if(lunformatted) then
+       inquire(iolength=reclen) itime,axis_1,axis_2
+       open(unit=88,file='orientation_matrix.bin',access='direct',form='unformatted',status='replace',recl=reclen)
+       inquire(iolength=reclen) itime,x_c
+       open(unit=1110, file='position_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle position
+       open(unit=1111, file='position_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle position
+       open(unit=1112, file='position_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle position
+       open(unit=1120, file='velocity_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle velocity
+       open(unit=1121, file='velocity_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle velocity
+       open(unit=1122, file='velocity_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle velocity
+       open(unit=120, file='om_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)             ! rotational velocity
+       open(unit=121, file='om_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)
+       open(unit=122, file='om_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)
+        
+       open(unit=123, file='moment_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)
+       open(unit=124, file='moment_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)
+       open(unit=125, file='moment_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)
+       open(unit=223, file='force_x.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
+       open(unit=224, file='force_y.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
+       open(unit=225, file='force_z.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
+    else
+       open(unit=123, file='moment_x')
+       open(unit=124, file='moment_y')
+       open(unit=125, file='moment_z')
+       open(unit=223, file='force_x')
+       open(unit=224, file='force_y')
+       open(unit=225, file='force_z')
+       open(unit=88,file='orientation_matrix')
+       open(unit=1110, file='position_x')      ! particle position
+       open(unit=1111, file='position_y')      ! particle position
+       open(unit=1112, file='position_z')      ! particle position
+       open(unit=1120, file='velocity_x')      ! particle velocity
+       open(unit=1121, file='velocity_y')      ! particle velocity
+       open(unit=1122, file='velocity_z')      ! particle velocity
+       open(unit=120, file='om_x')             ! rotational velocity        
+       open(unit=121, file='om_y')
+       open(unit=122, file='om_z')
+    endif
 
     if(.not. lrigid)  then ! integration of vel inside particle wt rigid body assumption
        open(unit=301,file='body_int_u',STATUS='UNKNOWN')

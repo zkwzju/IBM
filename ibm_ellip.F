@@ -3,6 +3,7 @@
      &     torq_x,torq_y,torq_z,lcheck,lconvect
       use p_dyn_m
       use common_m
+      use ellip_common_m, only : lunformatted
       implicit none
 c
 c This subroutine creates the forcing function (forcing_xyz)
@@ -195,7 +196,7 @@ C$OMP END PARALLEL DO
          for_pz(n)=0.d0
       enddo
 !>>> cell_v(nzm/2) ??? 
-C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n)
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
       do n=1,num_p
          do l=1,n_l(n)
             temp_var = cell_v(nzm/2)*dv_l(l,n)
@@ -212,7 +213,7 @@ C$OMP END PARALLEL DO
          torq_z(n)=0.d0
       enddo
 !>>> cell_v(nzm/2) ??? 
-C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n)
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
       do n=1,num_p
          do l=1,n_l(n)
             temp_var = cell_v(nzm/2)*dv_l(l,n)
@@ -332,9 +333,25 @@ c
          write(114,*) itime,c_lx_cluster
          write(115,*) itime,c_d_cluster
          write(116,*) itime,c_lz_cluster
-         write(123,310) itime,(moment_x(n),n=1,num_p)
-         write(124,310) itime,(moment_y(n),n=1,num_p)
-         write(125,310) itime,(moment_z(n),n=1,num_p)
+
+         if(lunformatted) then
+            write(223,rec=itime) itime, c_lx_total
+            write(224,rec=itime) itime, c_d_total
+            write(225,rec=itime) itime, c_lz_total
+            
+            write(123,rec=itime) itime, moment_x
+            write(124,rec=itime) itime, moment_y
+            write(125,rec=itime) itime, moment_z
+         else
+            
+            write(223,310) itime,(c_lx_total(n),n=1,num_p)
+            write(224,310) itime,(c_d_total(n) ,n=1,num_p)
+            write(225,310) itime,(c_lz_total(n),n=1,num_p)
+            
+            write(123,310) itime,(moment_x(n),n=1,num_p)
+            write(124,310) itime,(moment_y(n),n=1,num_p)
+            write(125,310) itime,(moment_z(n),n=1,num_p)
+         endif
       endif
 
  310  format (I7,<num_p>E15.7)
@@ -374,7 +391,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       INTEGER n,i,j,k,id,jd
       
-C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n)
+!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,i,id,j,jd,k)
       do n=1,num_p
          int_fx(n) = 0.d0
          int_fy(n) = 0.d0
@@ -407,7 +424,7 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n)
             end do 
          end do 
       end do 
-C$OMP END PARALLEL DO
+!$OMP END PARALLEL DO
       end subroutine int_f_fluid
 
 

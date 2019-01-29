@@ -68,14 +68,14 @@ c     to calculate the Lagrangian volume
       case(3)
          dv_l = 1.0d0
       case(4)
-         call read_weights(dv_l,n_ll,np)
+         call read_weights(dv_l,n_ll,num_p)
       end select
 
       dv_l = dv_l * scale_dv      ! for invistigating purpose
       end do
 
       if(itime .eq. 0) then
-         open(101,file='dv_l.dat',action='write',position='append')
+         open(101,file='dv_l.dat',action='write')
          do n=1,num_p
             write(101,*) 'particle #',n
             write(101,*) dv_l(1:n_l(n),n)

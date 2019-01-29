@@ -4,7 +4,7 @@ Grid nz				: 21
 Number of particle		: 1
 Max Lagrangian markers		: 2  
  
-IBM on flag			: 1
+
 Moving wall velocity (top)	: 1.0
 Moving wall velocity (bottom)	: 0.0
 !Initial v field			: 0.0

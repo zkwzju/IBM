@@ -27,7 +27,7 @@ module common_m
   integer irkk,n_l_max
   INTEGER flagibm,ibm_moving,icount
   INTEGER, allocatable,dimension(:) :: n_l
-
+  integer, parameter :: MaxPerLine = 200
 
   CHARACTER*32 ch_file,tt_file,format_mode,sp_file
   real*8 volibm,volibm_mid

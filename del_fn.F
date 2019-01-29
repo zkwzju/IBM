@@ -119,8 +119,7 @@ c     Calculating the dirac delta function in the z direction
             dum3(k)=FI
          enddo
       endif
-cC$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
-
+cC$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,i_t,j,j_t,k)
       do i=i1,i2
          if(i .lt. 1) then
             i_t=nx+i
@@ -142,7 +141,7 @@ cC$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
             enddo
          enddo
       enddo
-c     C$OMP END PARALLEL DO
+cC$OMP END PARALLEL DO
          
 
 ccccccccccccccccccccccccccccccccccccccccccccccccccccc

@@ -911,48 +911,6 @@ c     ================================================== c
          call ellipsoid(lgeneration=.true.)
          call post_ellip
 
-c     >>>
-c$$$         write(*,*) '====================='
-c$$$         write(*,*) 'n_l',n_l(1),n_ll
-c$$$         write(*,*) p_iw
-c$$$         write(*,*) '----------1'
-c$$$         write(*,*) p_ie
-c$$$         write(*,*) '----------2'
-c$$$         write(*,*) p_js
-c$$$         write(*,*) '----------3'
-c$$$         write(*,*) p_jn
-c$$$         write(*,*) '----------4'
-c$$$         write(*,*) p_kb
-c$$$         write(*,*) '----------5'
-c$$$         write(*,*) p_kt
-c$$$         write(*,*) '----------6'
-c$$$         write(*,*) ddf(1,1,1:3,1:3,1:4)
-c$$$         write(*,*) '----------7'
-c$$$         write(*,*) u_p(1:10,1)
-c$$$         write(*,*) '----------8'
-c$$$         write(*,*) v_p(1:10,1)
-c$$$         write(*,*) '----------9'
-c$$$         write(*,*) w_p(1:10,1)
-c$$$         write(*,*) '----------10'
-c$$$         write(*,*) rx_l(1:10,1)
-c$$$         write(*,*) '----------11'
-c$$$         write(*,*) ry_l(1:10,1)
-c$$$         write(*,*) '----------12'
-c$$$         write(*,*) rz_l(1:10,1)
-c$$$         write(*,*)'dx,dy',deltax,deltay
-c$$$         write(*,*) 'dz------'
-c$$$         write(*,*) deltaz(1:nzm)
-c$$$         write(*,*) 'zets'
-c$$$         write(*,*) zets(1:nzm)
-c$$$c$$$         write(*,*) '-----------dvl'
-c$$$c$$$         write(*,*) dv_l(1:10,1)
-c$$$         write(*,*) '-----------ddf1'
-c$$$         write(*,*) ddf(1,1,:,:,:)
-c$$$         write(*,*) '------------ddf2'
-c$$$         write(*,*) ddf(2,1,:,:,:)
-c$$$c$$$         
-c$$$         stop
-         
          
 c ================================================== c
          

@@ -475,16 +475,16 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
 
          enddo
          
-         nblock=ceiling(n_ll/200.0d0)
-         nremain=mod(n_ll,200)
+         nblock=ceiling(n_ll*1.d0/MaxPerLine)
+         nremain=mod(n_ll,MaxPerLine)
          write(666,'(ES16.8)',advance='no') rtime
          do nn=1,nblock
             if(nn .eq. nblock) then
                write(666,'(<nremain>ES16.8)') (diff_v(l,n),
-     &          l=(nn-1)*200+1,n_l(n))
+     &          l=(nn-1)*MaxPerLine+1,n_l(n))
             else
-               write(666,'(200ES16.8)') (diff_v(l,n),
-     &          l=(nn-1)*200+1,nn*200)
+               write(666,'(<MaxPerLine>ES16.8)') (diff_v(l,n),
+     &          l=(nn-1)*MaxPerLine+1,nn*MaxPerLine)
             endif
          enddo
       enddo
@@ -561,7 +561,8 @@ C$OMP END PARALLEL DO
 
       weight_v = 0.d0
       
-!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n)
+!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,i1,i2,j1,j2,k1,k2,l,i)
+!$OMP$  private(id,j,jd,k,weight_v)
       do n=1,num_p
          i1 = x_0(n)
          i2 = x_1(n)
@@ -614,11 +615,12 @@ C$OMP END PARALLEL DO
       real*8 xp3(3),up3(3),ax1(3),ax2(3),ax3(3)
       real*8 weight_v
       integer irk,n,l,i,j,k,i_ind,j_ind,k_ind
-      real*8 v_diff(200)     ! hardcoded matrix dimension
+      real*8 v_diff(MaxPerLine)     ! hardcoded matrix dimension
       
       it_step = 1.0D0/t_step
       
-!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n)
+!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,om_ellip,ax1,ax2,ax3,up3),
+!$OMP& private(I_ellip,F_v,torq_v,om_ellip_b)
       do n=1,num_p
 
          om_ellip(1) = om_x(n)
@@ -637,6 +639,8 @@ C$OMP END PARALLEL DO
          up3(2) = v_c(n)
          up3(3) = w_c(n)
 
+         I_ellip = I_particle(:,n)
+
          if(lrigid) then
            
             if(ltranslation) then
@@ -649,11 +653,14 @@ C$OMP END PARALLEL DO
                endif
                if(lclip_y) then
                   F_v(2) = 0.0D0
+                  grav   = 0.0D0
                endif
                if(lclip_z) then
                   F_v(3) = 0.0D0
                endif
+
                call part_translation2(xp3,up3,F_v,grav,vol_ellip,t_step)
+               
             endif
             if(lrotation) then
                torq_v(1) = - torq_x(n)*(delta_t/t_step) ! stupid definition
@@ -691,6 +698,7 @@ C$OMP END PARALLEL DO
                endif
                if(lclip_y) then
                   F_v(2) = 0.0D0
+                  grav   = 0.0D0
                endif
                if(lclip_z) then
                   F_v(3) = 0.0D0

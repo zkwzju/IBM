@@ -15,14 +15,14 @@ contains
     call parser_read('Linear v field flag',llinear_v,.false.)
 
     ! a,b,c are along x,y,z, respectively
-    call parser_read('Ellipsoid semi-axis a',xa)
-    call parser_read('Ellipsoid semi-axis b',xb)
-    call parser_read('Ellipsoid semi-axis c',xc)
+    call parser_read('Ellipsoid semi-axis a',xa,1.0_wp)
+    call parser_read('Ellipsoid semi-axis b',xb,1.0_wp)
+    call parser_read('Ellipsoid semi-axis c',xc,1.0_wp)
     call parser_read('Particle mass density',rho_p,2.0_wp)
     call parser_read('Fluid mass density',rho_f,1.0_wp)
     call parser_read('Gravity (y)',g_y,0.0_wp)
     grav=(/0.0_wp,g_y,0.0_wp/) ! gravity
-    call parser_read('Method for weight dv',iweight,1)
+    call parser_read('Method for weight dv',iweight,3)
     if(iweight .ne.1) then
        call parser_read('Update weight dv',lupdate_dv,.false.)
     else
@@ -32,7 +32,7 @@ contains
     call parser_read('Scale factor for dv',scale_dv,1.0_wp)
     call parser_read('Rigid body assumption',lrigid,.true.)
     call parser_read('Translational motion',ltranslation,.true.)
-    call parser_read('Rotational motion',lrotation,.false.)
+    call parser_read('Rotational motion',lrotation,.true.)
     call parser_read('Prestep fraction',frac_step,0.0_wp)
     if(frac_step < 0.0_wp .or. frac_step > 1.0_wp) then
        write(*,*) 'Prestep fraction wrong value:',frac_step
@@ -50,27 +50,64 @@ contains
     call parser_read('clip x rotation',lclip_ox,.false.)
     call parser_read('clip y rotation',lclip_oy,.false.)
     call parser_read('clip z rotation',lclip_oz,.false.)
+
+    call parser_read('unformatted output',lunformatted,.false.)
   end subroutine read_settings
 
   ! -------------------------------------------------- !
   subroutine init_location
     use parser_m
     real(wp) :: x0,y0,z0
-    integer  :: n
-
+    character(len=120) :: strFile
+    integer  :: n,istatus
+    logical  :: llocation
     call parser_read('Particle initial location (x)',x0,rlenx/2.0_wp);
     call parser_read('Particle initial location (y)',y0,rleny/2.0_wp);
     call parser_read('Particle initial location (z)',z0,0.0_wp);
 
-    do n=1,num_p
-       if(x0 <0 .or. y0<0 .or. z0 > rlenz/2.0_wp .or. z0 < -rlenz/2.0_wp) then
-          write(*,*) "Particle is initially outside of the channel!"
+    call parser_is_defined('Particles initial location (filename)',llocation)
+    
+    if(llocation) then       ! read particles location from file
+       call parser_read('Particles initial location (filename)',strFile)
+
+       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
+       if(istatus .ne. 0) then
+          write(*,*) 'Problem to open file: ',strFile
           stop
-       endif
-       x_c(n) = mod(x0,rlenx)
-       y_c(n) = mod(y0,rleny)
-       z_c(n) = z0
-    end do
+       end if
+
+       do n=1,num_p
+          read(170,*,IOSTAT=istatus)  x0,y0,z0
+          if (istatus > 0)  then
+             write(*,*) strFile, 'problematic'
+             stop
+          else if (istatus < 0) then  ! end of file reached
+             write(*,*) "particles location in file doesn't match particles number",n,num_p
+             stop
+          else
+             if(x0 <0 .or. y0<0 .or. z0 > rlenz/2.0_wp .or. z0 < -rlenz/2.0_wp) then
+                write(*,*) "Particle is initially outside of the channel!"
+                stop
+             endif
+             x_c(n) = mod(x0,rlenx)
+             y_c(n) = mod(y0,rleny)
+             z_c(n) = z0
+          end if
+
+       end do
+       close(170)
+    else                   ! set particles location from single input
+       do n=1,num_p
+          if(x0 <0 .or. y0<0 .or. z0 > rlenz/2.0_wp .or. z0 < -rlenz/2.0_wp) then
+             write(*,*) "Particle is initially outside of the channel!"
+             stop
+          endif
+          x_c(n) = mod(x0,rlenx)
+          y_c(n) = mod(y0,rleny)
+          z_c(n) = z0
+       end do
+    endif
+    
   end subroutine init_location
   ! -------------------------------------------------- !
 
@@ -78,15 +115,16 @@ contains
     use parser_m
     implicit none
     integer, intent(inout)  :: ibm_moving
-    character(len=120)      :: input,command_buffer
+    character(len=120)      :: input,command_buffer,strFile
     real(wp) :: p,mass 
     integer  :: imove
-    integer  :: i,Np
-    logical  :: lflag,laxis1,laxis2,laxis3,linertia,lvol
+    integer  :: i,Np,istatus
+    logical  :: lflag,laxis1,laxis2,laxis3,linertia,lvol,ldirection
     real(wp) :: axis1(3),axis2(3),axis3(3)
 
     ! particle orientation vetors
     allocate(axis_1(3,num_p),axis_2(3,num_p),axis_3(3,num_p))
+    allocate(I_particle(3,num_p))
     ! particle Lagrangian markers coordinates wrt particle center
     allocate(xlp(n_ll),ylp(n_ll),zlp(n_ll))
     allocate(x_0(num_p),x_1(num_p),y_0(num_p),y_1(num_p),z_0(num_p),z_1(num_p))
@@ -136,16 +174,76 @@ contains
        axis2=(/0.0_wp,1.0_wp,0.0_wp/)
     end if
     ! axis3 = axis1 x axis2
-    axis3(1) =  axis1(2)*axis2(3) - axis2(2)*axis1(3)
-    axis3(2) = -axis1(1)*axis2(3) + axis2(1)*axis1(3)
-    axis3(3) =  axis1(1)*axis2(2) - axis2(1)*axis1(2)
-
+!    axis3(1) =  axis1(2)*axis2(3) - axis2(2)*axis1(3)
+!    axis3(2) = -axis1(1)*axis2(3) + axis2(1)*axis1(3)
+!    axis3(3) =  axis1(1)*axis2(2) - axis2(1)*axis1(2)
+    axis3 = cross(axis1,axis2)
+    
     do i=1,num_p      ! all particles have same initial orientation
        axis_1(:,i) = axis1
        axis_2(:,i) = axis2
        axis_3(:,i) = axis3
+       I_particle(:,i) = I_ellip
     end do
 
+    ! read initial orientation if defined
+    call parser_is_defined('Particles 1 & 2 axes direction (filename)',ldirection)
+    if(ldirection) then
+       call parser_read('Particles 1 & 2 axes direction (filename)',strFile)
+       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
+       if(istatus .ne. 0) then
+          write(*,*) 'Problem to open file: ',strFile
+          stop
+       end if
+
+       do i=1,num_p
+          read(170,*,IOSTAT=istatus) axis1,axis2
+          ! normalize
+          axis1 = axis1/sqrt(axis1(1)**2+axis1(2)**2+axis1(3)**2)
+          axis2 = axis2/sqrt(axis2(1)**2+axis2(2)**2+axis2(3)**2)
+          if (istatus > 0)  then
+             write(*,*) strFile, 'problematic'
+             stop
+          else if (istatus < 0) then  ! end of file reached
+             write(*,*) "particles direction in file doesn't match particles number",i,num_p
+             stop
+          else
+             axis3 = cross(axis1,axis2)
+             axis_1(:,i) = axis1
+             axis_2(:,i) = axis2
+             axis_3(:,i) = axis3
+          end if
+       end do
+       close(170)
+    endif
+
+    ! read particles inertia if defined
+    call parser_is_defined('Particles rotational inertia (filename)',linertia)
+    if(linertia) then
+       call parser_read('Particles rotational inertia (filename)',strFile)
+       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
+       if(istatus .ne. 0) then
+          write(*,*) 'Problem to open file: ',strFile
+          stop
+       end if
+
+       do i=1,num_p
+          read(170,*,IOSTAT=istatus) I_ellip
+          if (istatus > 0)  then
+             write(*,*) strFile, 'problematic'
+             stop
+          else if (istatus < 0) then  ! end of file reached
+             write(*,*) "particles rotational inertia in file doesn't match particles number",i,num_p
+             stop
+          else
+             I_particle(:,i) = I_ellip
+          end if
+       end do
+       close(170)
+    endif
+
+
+       
 
     ! initial rotational velocity
     om_ellip   = 0.0_wp
@@ -163,7 +261,7 @@ contains
 
 
 
-    call parser_read('Lagrangian markers generation method',imethod,1)
+    call parser_read('Lagrangian markers generation method',imethod,2)
     ! approximate surface area of an ellipsoid
     p=1.6075_wp
     S_ellp=4*pi*((xa**p * xb**p + xa**p * xc**p +xb**p * xc**p)/3.0_wp)**(1.0_wp/p)
@@ -238,7 +336,7 @@ contains
   subroutine LP_support
     integer  :: n,l,i,j,k
 
-    !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,l)
+    !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,l,i,j,k)
     do n=1,num_p
        do l=1,n_l(n)
           do i=1,nx+1
@@ -287,7 +385,7 @@ contains
     integer  :: np,n,i,j,l
     real(wp) :: A(3,3), xyzc
 
-    !$OMP PARALLEL DO DEFAULT(SHARED),private(n)
+    !$OMP PARALLEL DO DEFAULT(SHARED),private(n,A,np)
     do n=1,num_p
        A(:,1) = axis_1(:,n)
        A(:,2) = axis_2(:,n)
@@ -319,18 +417,32 @@ contains
     !$OMP END PARALLEL DO
 
     if(irkk .eq. 3) then
-       write(88,'(I7,9f10.6)') itime, ((A(i,j),i=1,3),j=1,3)
-       write(1110, 300) itime,(x_c(i),i=1,num_p)
-       write(1111, 300) itime,(y_c(i),i=1,num_p)
-       write(1112, 300) itime,(z_c(i),i=1,num_p)
-       write(1120, 300) itime,(u_c(i),i=1,num_p)
-       write(1121, 300) itime,(v_c(i),i=1,num_p)
-       write(1122, 300) itime,(w_c(i),i=1,num_p)
-       write(120,  300) itime,(om_x(i),i=1,num_p)
-       write(121,  300) itime,(om_y(i),i=1,num_p)
-       write(122,  300) itime,(om_z(i),i=1,num_p)
+       if(lunformatted) then
+          write(88,  rec=itime),itime,axis_1,axis_2
+          write(1110,rec=itime),itime,x_c
+          write(1111,rec=itime),itime,y_c
+          write(1112,rec=itime),itime,z_c
+          write(1120,rec=itime),itime,u_c
+          write(1121,rec=itime),itime,v_c
+          write(1122,rec=itime),itime,w_c
+          write(120,rec=itime),itime,om_x
+          write(121,rec=itime),itime,om_y
+          write(122,rec=itime),itime,om_z
+       else
+          write(88,   312) itime,axis_1,axis_2
+          write(1110, 311) itime,x_c
+          write(1111, 311) itime,y_c
+          write(1112, 311) itime,z_c
+          write(1120, 311) itime,u_c
+          write(1121, 311) itime,v_c
+          write(1122, 311) itime,w_c
+          write(120,  311) itime,om_x
+          write(121,  311) itime,om_y
+          write(122,  311) itime,om_z
+       endif
     endif
-300 format (I7,<num_p>E15.7)
+311 format (I7,<num_p>E15.7)
+312 format (I7,<num_p*6>f10.6)   
 
     
   end subroutine Lag_marker_moving
@@ -342,7 +454,7 @@ contains
     integer  :: l,n
     real(wp) :: u_rot,v_rot,w_rot
 
-    !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l)
+    !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,l,u_rot,v_rot,w_rot)
     do n=1,num_p
        do l=1,n_l(n)
 
@@ -592,5 +704,15 @@ contains
     call SGETRI(n,Ainv,n,ipiv,work,n,info)
     if (info.ne.0) stop 'Matrix inversion failed!'
   end function finv
+  ! -------------------------------------------------- !
+
+  FUNCTION cross(a, b)
+    real(wp), DIMENSION(3) :: cross
+    real(wp), DIMENSION(3), INTENT(IN) :: a, b
+
+    cross(1) = a(2) * b(3) - a(3) * b(2)
+    cross(2) = a(3) * b(1) - a(1) * b(3)
+    cross(3) = a(1) * b(2) - a(2) * b(1)
+  END FUNCTION cross
   ! -------------------------------------------------- !
 end module ellipsoid_m

@@ -21,6 +21,7 @@ contains
 
           if(np > n_ll) then
              write(*,*) 'Fatal: too many Lagrangian points'
+             write(*,*) np,'>',n_ll
              stop
           end if
        case(3)

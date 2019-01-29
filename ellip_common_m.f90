@@ -10,6 +10,7 @@ module ellip_common_m
   real(wp)              :: om_ellip(3),om_ellip_b(3)
   real(wp)              :: I_ellip(3)
   real(wp), allocatable :: axis_1(:,:),axis_2(:,:),axis_3(:,:)
+  real(wp), allocatable :: I_particle(:,:)
   real(wp)              :: rho_p,rho_f,vt_l,vb_l
   real(wp)              :: grav(3)
   real(wp), allocatable :: for_px(:),for_py(:),for_pz(:)
@@ -24,6 +25,6 @@ module ellip_common_m
   integer  :: iweight,iflag_ibm
   logical  :: lexact_weight,lupdate_dv,lrigid,lnonuniform,lrotation,ltranslation
   logical  :: lclip_x,lclip_y,lclip_z,lclip_ox,lclip_oy,lclip_oz
-  logical  :: lcheck,llinear_v,lsphere,lconvect
+  logical  :: lcheck,llinear_v,lsphere,lconvect,lunformatted
   character(len=100) :: sname,sname_w
 end module ellip_common_m
