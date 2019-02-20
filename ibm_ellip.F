@@ -182,7 +182,7 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
                   enddo
                enddo
             enddo
-c
+
             u_forcing(l,n)=(u_p(l,n)-up_tilde(l,n))/dt
             v_forcing(l,n)=(v_p(l,n)-vp_tilde(l,n))/dt
             w_forcing(l,n)=(w_p(l,n)-wp_tilde(l,n))/dt
@@ -195,28 +195,26 @@ C$OMP END PARALLEL DO
          for_py(n)=0.d0
          for_pz(n)=0.d0
       enddo
-!>>> cell_v(nzm/2) ??? 
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
       do n=1,num_p
          do l=1,n_l(n)
-            temp_var = cell_v(nzm/2)*dv_l(l,n)
+            temp_var = marker_v(l,n)*dv_l(l,n)
             for_px(n)=for_px(n)+u_forcing(l,n)*temp_var   
             for_py(n)=for_py(n)+v_forcing(l,n)*temp_var
             for_pz(n)=for_pz(n)+w_forcing(l,n)*temp_var
          enddo
       enddo
 C$OMP END PARALLEL DO
-!<<<
       do n=1,num_p
          torq_x(n)=0.d0
          torq_y(n)=0.d0
          torq_z(n)=0.d0
       enddo
-!>>> cell_v(nzm/2) ??? 
+
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
       do n=1,num_p
          do l=1,n_l(n)
-            temp_var = cell_v(nzm/2)*dv_l(l,n)
+            temp_var = marker_v(l,n)*dv_l(l,n)
             torq_x(n)=torq_x(n)+(ry_l(l,n)*w_forcing(l,n)
      &           -rz_l(l,n)*v_forcing(l,n))*temp_var
             torq_y(n)=torq_y(n)+(rz_l(l,n)*u_forcing(l,n)
@@ -226,7 +224,7 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
          enddo
       enddo
 C$OMP END PARALLEL DO
-!<<<
+
 c Caculating the forcing term on the Eulerian grid
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,i1,i2,j1,j2,k1,k2
 C$OMP& ,i,j,k,i_f,j_f,i_ddf,j_ddf)

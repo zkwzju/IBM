@@ -122,8 +122,7 @@ contains
     write(100,*) zets(1:nz)
     close(100)
 
-    ! open file for velocity difference between fluid and Lagrangian marker
-    open(666,file='vel_diff.dat',STATUS='UNKNOWN')
+
     
     ! produce complete output for initial condition if ...
     if(ch_fin.eq.0)then
@@ -163,6 +162,11 @@ contains
 
 
     if(lunformatted) then
+
+       if(lcheck) then
+          ! open file for velocity difference between fluid and Lagrangian marker
+          open(666,file='vel_diff.dat',STATUS='UNKNOWN',form='unformatted')
+       endif
        inquire(iolength=reclen) itime,axis_1,axis_2
        open(unit=88,file='orientation_matrix.bin',access='direct',form='unformatted',status='replace',recl=reclen)
        inquire(iolength=reclen) itime,x_c
@@ -183,6 +187,10 @@ contains
        open(unit=224, file='force_y.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
        open(unit=225, file='force_z.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
     else
+       if(lcheck) then
+          ! open file for velocity difference between fluid and Lagrangian marker
+          open(666,file='vel_diff.dat',STATUS='UNKNOWN')
+       endif
        open(unit=123, file='moment_x')
        open(unit=124, file='moment_y')
        open(unit=125, file='moment_z')
@@ -211,5 +219,7 @@ contains
           open(unit=306,file='body_int_r_w',STATUS='UNKNOWN')
        endif
     endif
+    
+    if(ldebug) write(*,*) 'initialization done'
   end subroutine initialization
 end module init_m

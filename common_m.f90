@@ -121,7 +121,7 @@ module common_m
 
   real*8,allocatable,dimension(:) ::  x_c,y_c,z_c,u_c,v_c,w_c,om_x,om_y,om_z
   real*8,allocatable,dimension(:) :: cell_v
-  real*8,allocatable,dimension(:,:) ::  x_o,y_o,z_o,dv_l,ds
+  real*8,allocatable,dimension(:,:) ::  x_o,y_o,z_o,dv_l,ds,marker_v
   real*8,allocatable,dimension(:,:) ::  rx_l,ry_l,rz_l
   real*8,allocatable,dimension(:) ::  c_d_total,c_lx_total,c_lz_total
   real*8,allocatable,dimension(:) ::  c_d_avg,c_lx_avg,c_lz_avg
@@ -239,7 +239,7 @@ contains
          ,u_c(num_p),v_c(num_p),w_c(num_p)&
          ,om_x(num_p),om_y(num_p),om_z(num_p) )
     allocate( cell_v(nz) )    ! Eulerian cell volume
-    allocate(   x_o(n_ll,num_p),y_o(n_ll,num_p),z_o(n_ll,num_p),dv_l(n_ll,num_p),ds(n_ll,num_p) )
+    allocate(   x_o(n_ll,num_p),y_o(n_ll,num_p),z_o(n_ll,num_p),dv_l(n_ll,num_p),ds(n_ll,num_p),marker_v(n_ll,num_p) )
     allocate(   rx_l(n_ll,num_p),ry_l(n_ll,num_p),rz_l(n_ll,num_p) )
     allocate(   c_d_total(num_p),c_lx_total(num_p),c_lz_total(num_p) )
     allocate(   c_d_avg(num_p),c_lx_avg(num_p),c_lz_avg(num_p) )

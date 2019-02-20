@@ -53,7 +53,7 @@ c
 c
       SUBROUTINE output
       use common_m
-      use ellip_common_m, only: lcheck
+      use ellip_common_m, only: lcheck,lunformatted
       implicit none
 
 c
@@ -84,31 +84,32 @@ cccccccccccccccccccccccccc GA cccccccccccccccccccccccccccccccccc
       close(126)
 cccccccccccccccccccccccccc GA
 c
-!>>>
+!>>>  
       if(lcheck) then
-         open(375,file=anum('forcing_xyz1',itime),form=format_mode)
+         open(375,file=anum('fIBM_1',itime),form='unformatted')
          write(375) forcing_x1,forcing_y1,forcing_z1
          close(375)
          
-         open(375,file=anum('forcing_xyz2',itime),form=format_mode)
+         open(375,file=anum('fIBM_2',itime),form='unformatted')
          write(375) forcing_x2,forcing_y2,forcing_z2
          close(375)
          
-         open(375,file=anum('forcing_xyz3',itime),form=format_mode)
+         open(375,file=anum('fIBM_3',itime),form='unformatted')
          write(375) forcing_x3,forcing_y3,forcing_z3
          close(375)
 
-         open(376,file=anum('forcing_xyz01',itime),form=format_mode)
+         open(376,file=anum('fIBM_01',itime),form='unformatted')
          write(376) forcing_x01,forcing_y01,forcing_z01
          close(376)
 
-         open(376,file=anum('forcing_xyz02',itime),form=format_mode)
+         open(376,file=anum('fIBM_02',itime),form='unformatted')
          write(376) forcing_x02,forcing_y02,forcing_z02
          close(376)
          
-         open(376,file=anum('forcing_xyz03',itime),form=format_mode)
+         open(376,file=anum('fIBM_03',itime),form='unformatted')
          write(376) forcing_x03,forcing_y03,forcing_z03
          close(376)
+ 
       endif
 !<<<
       

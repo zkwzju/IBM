@@ -859,10 +859,10 @@ c       write(*,*) j, kts(j)
       enddo
 c
 ! calculate cell volume
-      cell_v(1) = deltax*deltay*dabs(zets(1)-zets(2))/2.d0
-      cell_v(nz) = deltax*deltay*dabs(zets(nz-1)-zets(nz))/2.d0
+      cell_v(1) = deltax*deltay*dabs(zets(1)-zets(2))
+      cell_v(nz) = deltax*deltay*dabs(zets(nz-1)-zets(nz))
       do k = 2,nzm
-         cell_v(k) = deltax*deltay*deltaz(k)
+         cell_v(k) = deltax*deltay*dabs(zets(k+1)-zets(k-1))/2.0d0
       end do
  
 ccccccccccccccccccccccccccccccccccccccccccccccc GA ccccccccccccccccccc    

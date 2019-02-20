@@ -9,13 +9,15 @@
       integer i_ddf1,i_ddf2,j_ddf1,j_ddf2,k_ddf1,k_ddf2
       real*8  area,vol(nz)
 !      real*8  aa(n_ll,n_ll),bb(n_ll)
-      integer info,nl
+      integer info
 
  
+      if(ldebug) write(*,*) 'starting: post_ellip'
       
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,l,i1,i2,j1,j2,k1,k2,
+C$OMP&    i,i_ddf,j,j_ddf,k)  
       do n=1,num_p
-         nl = n_l(n)
-         do l=1,nl
+         do l=1,n_l(n)
             call del_fn(l,n)
             i1=p_iw(l,n)
             i2=p_ie(l,n)
@@ -49,7 +51,7 @@
             enddo
          enddo
       enddo
-
+C$OMP END PARALLEL DO
 
 c     to calculate the Lagrangian volume
 
@@ -60,19 +62,32 @@ c     to calculate the Lagrangian volume
          vol(k) = area*(zets(k-1)-zets(k+1))/2.d0
       end do
 
-      do n=1,num_p
-         nl=n_l(n)
-         select case(iweight)
-      case(2)
-         dv_l(1:n_l(n),n) = S_ellp/nl * deltax ! dx=dy=dz
-      case(3)
-         dv_l = 1.0d0
-      case(4)
-         call read_weights(dv_l,n_ll,num_p)
-      end select
-
+      
+      if(lident) then
+         do n=1,num_p
+            select case (iweight)
+            case(2)
+               dv_l(1:n_l(n),n) = S_ellp/n_l(n) * deltax ! dx=dy=dz
+            case(3)
+               dv_l = 1.0d0
+            case(4)
+               call read_weights(dv_l,n_ll,num_p)
+            end select
+         enddo
+      else
+         select case (iweight)
+         case(3)
+            dv_l = 1.0d0
+         case(4)
+            call read_weights(dv_l,n_ll,num_p)
+         case default
+            write(*,*) 'Only allow reading weight from file'
+            write(*,*) 'or const for non-identical particle'
+            stop
+         end select
+      endif
       dv_l = dv_l * scale_dv      ! for invistigating purpose
-      end do
+
 
       if(itime .eq. 0) then
          open(101,file='dv_l.dat',action='write')
@@ -104,7 +119,8 @@ c     to calculate the Lagrangian volume
 !>>>
 !      call correlation(n_ll,vol)
 !      call single_point_test
-    !<<<  
+!<<<
+      if(ldebug) write(*,*) 'end: post_ellip'
       end subroutine post_ellip
 
 
@@ -116,7 +132,6 @@ c     to calculate the Lagrangian volume
       real*8 dv_l(n_ll,np)
       integer  n_ll,np
       integer istatus,l,n
-      
 
       open(unit=170, file=sname_w, STATUS='OLD',iostat=istatus)
       if(istatus .ne. 0) then

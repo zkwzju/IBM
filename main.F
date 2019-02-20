@@ -8,6 +8,8 @@
       REAL*8 auxdepo(nx0,ny0),auxeros(nx0,ny0)
 
       call initialization
+      if(ldebug) write(*,*) 'main_run: initialization done'
+      
 c     loop over the time steps
       do itime = itfirst,iend
 
@@ -18,10 +20,13 @@ c     write the time step number to logfile
           write(26,*)' '
         endif
 c
+        if(ldebug) write(*,*) 'main_run: before advance(0)'
 c     perform one complete time step
         call advance(0)
         rtime  = rtime+dt
 
+        if(ldebug) write(*,*) 'main_run: after advacnce(0)'
+        
 c     produce outputs in Fourier space
 c     output spectra
         if((mod(itime-istart,oi_spec).eq.0.or.

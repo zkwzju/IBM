@@ -1,6 +1,6 @@
 module ellipsoid_m
   use ellip_common_m
-  use common_m, only : irkk
+  use common_m, only : irkk,marker_v,lident,ldebug
   implicit none
 contains
   ! -------------------------------------------------- !
@@ -39,7 +39,7 @@ contains
        stop
     endif
     call parser_read('Non-uniform z-grid',lnonuniform,.false.)
-    call parser_read('Z-grid stretching parameter',aalpha,0.99_wp)
+    call parser_read('Z-grid stretching parameter',aalpha,0.0_wp)
     call parser_read('Additional checking flag',lcheck,.false.)
     call parser_read('Sphere particle',lsphere,.true.)
     call parser_read('Convection',lconvect,.false.)
@@ -107,7 +107,6 @@ contains
           z_c(n) = z0
        end do
     endif
-    
   end subroutine init_location
   ! -------------------------------------------------- !
 
@@ -126,7 +125,12 @@ contains
     allocate(axis_1(3,num_p),axis_2(3,num_p),axis_3(3,num_p))
     allocate(I_particle(3,num_p))
     ! particle Lagrangian markers coordinates wrt particle center
-    allocate(xlp(n_ll),ylp(n_ll),zlp(n_ll))
+    if(lident) then       ! identical particles
+       allocate(xlp(n_ll,1),ylp(n_ll,1),zlp(n_ll,1))
+    else
+       allocate(xlp(n_ll,num_p),ylp(n_ll,num_p),zlp(n_ll,num_p))
+    endif
+
     allocate(x_0(num_p),x_1(num_p),y_0(num_p),y_1(num_p),z_0(num_p),z_1(num_p))
     allocate(for_px(num_p),for_py(num_p),for_pz(num_p))
     allocate(torq_x(num_p),torq_y(num_p),torq_z(num_p))
@@ -174,9 +178,6 @@ contains
        axis2=(/0.0_wp,1.0_wp,0.0_wp/)
     end if
     ! axis3 = axis1 x axis2
-!    axis3(1) =  axis1(2)*axis2(3) - axis2(2)*axis1(3)
-!    axis3(2) = -axis1(1)*axis2(3) + axis2(1)*axis1(3)
-!    axis3(3) =  axis1(1)*axis2(2) - axis2(1)*axis1(2)
     axis3 = cross(axis1,axis2)
     
     do i=1,num_p      ! all particles have same initial orientation
@@ -310,7 +311,7 @@ contains
 
     call parser_read('Lagrangian weights file',sname_w,'lagrangian_weights.dat')
 
-!    write(*,*) 'initialize_ellip done'
+    !    write(*,*) 'initialize_ellip done'
   end subroutine initialize_ellip
   ! ------------------------------------------------------------ !
 
@@ -327,7 +328,6 @@ contains
     call Lag_vel            ! Lagrangian markers velocity
 
     call particle_Euler_index
-
   end subroutine ellipsoid
 
   ! ------------------------------------------------------------ !  
@@ -335,6 +335,8 @@ contains
   ! Identifying domain of each lagrangian point to reduce computing time
   subroutine LP_support
     integer  :: n,l,i,j,k
+
+    if(ldebug) write(*,*) 'start: LP_suport'
 
     !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,l,i,j,k)
     do n=1,num_p
@@ -364,19 +366,46 @@ contains
                 goto 300
              endif
           enddo
-300       continue          
-          do k=2,nz-2               ! k is not allowed to reach the boundary
-             if (zets(k) .le. z_o(l,n)) then       ! zets decreasing along k
-                p_kb(l,n) = k-2
-                p_kt(l,n) = k+1
-                goto 400
+300       continue
+          if(z_o(l,n) > zets(1) .or. z_o(l,n) < zets(nz)) then
+             write(*,*) "z_o out of bound",z_o(l,n)
+             stop
+          endif
+          if(z_o(l,n) < zets(1) .and. z_o(l,n) > zets(2)) then    ! zets decreasing along k
+             p_kb(l,n) = 1
+             p_kt(l,n) = 2
+             marker_v(l,n) = deltax*deltay*dabs(zets(1)-zets(2))/2.0_wp
+          elseif(z_o(l,n) > zets(nz) .and. z_o(l,n) < zets(nz-1)) then
+             p_kb(l,n) = nz-1
+             p_kt(l,n) = nz
+             marker_v(l,n) = deltax*deltay*dabs(zets(nz)-zets(nz-1))/2.0_wp
+          else
+             if(z_o(l,n) .ge. 0.0_wp) then
+                do k=3,floor((nz+1)/2.0_wp)
+                   if(zets(k) .le. z_o(l,n)) then
+                      p_kb(l,n) = k-2
+                      p_kt(l,n) = k+1
+                      marker_v(l,n) = deltax*deltay*dabs(zets(k+1)-zets(k-1))/2.0_wp
+                      goto 400
+                   endif
+                enddo
+             else                               ! anti-symmetric treatment 
+                do k = nz-2, floor((nz+1)/2.0_wp),-1
+                   if(zets(k) .ge. z_o(l,n)) then
+                      p_kb(l,n) = k-1
+                      p_kt(l,n) = k+2
+                      marker_v(l,n) = deltax*deltay*dabs(zets(k+1)-zets(k-1))/2.0_wp
+                      goto 400
+                   endif
+                enddo
              endif
-          enddo
-400       continue
+400          continue
+          endif
        enddo
     enddo
     !$OMP END PARALLEL DO
 
+    if(ldebug) write(*,*) 'end: LP_suport'
   end subroutine LP_support
 
   ! -------------------------------------------------- !
@@ -393,13 +422,18 @@ contains
 
        np = n_l(n)
 
-       ! X'= A*X        ! new coordinates = rotation matrix * old coordinates
-       rx_l(1:np,n)  = A(1,1)*xlp(1:np) + A(1,2)*ylp(1:np) + A(1,3)*zlp(1:np)
-       ry_l(1:np,n)  = A(2,1)*xlp(1:np) + A(2,2)*ylp(1:np) + A(2,3)*zlp(1:np)
-       rz_l(1:np,n)  = A(3,1)*xlp(1:np) + A(3,2)*ylp(1:np) + A(3,3)*zlp(1:np)
+       ! X'= A*X        ! new coordinates = rotation matrix * original coordinates
+       if(lident) then
+          rx_l(1:np,n)  = A(1,1)*xlp(1:np,1) + A(1,2)*ylp(1:np,1) + A(1,3)*zlp(1:np,1)
+          ry_l(1:np,n)  = A(2,1)*xlp(1:np,1) + A(2,2)*ylp(1:np,1) + A(2,3)*zlp(1:np,1)
+          rz_l(1:np,n)  = A(3,1)*xlp(1:np,1) + A(3,2)*ylp(1:np,1) + A(3,3)*zlp(1:np,1)
+       else
+          rx_l(1:np,n)  = A(1,1)*xlp(1:np,n) + A(1,2)*ylp(1:np,n) + A(1,3)*zlp(1:np,n)
+          ry_l(1:np,n)  = A(2,1)*xlp(1:np,n) + A(2,2)*ylp(1:np,n) + A(2,3)*zlp(1:np,n)
+          rz_l(1:np,n)  = A(3,1)*xlp(1:np,n) + A(3,2)*ylp(1:np,n) + A(3,3)*zlp(1:np,n)
+       endif
 
        ! shift particle center to the channel domain
-
        call s_shift2range(x_c(n),rlenx)
        call s_shift2range(y_c(n),rleny)
        call s_shift2range_z(z_c(n))
@@ -407,12 +441,12 @@ contains
        x_o(1:np,n) = rx_l(1:np,n) + x_c(n)
        y_o(1:np,n) = ry_l(1:np,n) + y_c(n)
        z_o(1:np,n) = rz_l(1:np,n) + z_c(n)
+
        ! shift points x->[0,rlenx],y->[0,rleny]
        call v_shift2range(x_o(1:np,n),rlenx)
        call v_shift2range(y_o(1:np,n),rleny)
        ! z->[-rlenz/2,rlenz/2]
        call v_shift2range_z(z_o(1:np,n))
-
     end do
     !$OMP END PARALLEL DO
 
@@ -512,7 +546,7 @@ contains
     real(wp), intent(inout) :: lx(:)
     real(wp), intent(in)    :: x_range
 
-    lx=mod(lx,x_range) + (sign(0.5_wp,-lx) + 0.5)*x_range
+    lx = mod(lx,x_range*(1.0_wp+1.0e-15_wp))
     return
   end subroutine v_shift2range
   ! -------------------------------------------------- !
@@ -520,7 +554,7 @@ contains
   ! -------------------------------------------------- !
   subroutine v_shift2range_z(lz)
     real(wp), intent(inout) :: lz(:)
-
+ 
     lz=mod(lz-hrlenz,rlenz) + (sign(0.5_wp,-(lz-hrlenz)) + 0.5)*rlenz - hrlenz
     return
   end subroutine v_shift2range_z
@@ -530,8 +564,9 @@ contains
   subroutine s_shift2range(lx,x_range)
     real(wp), intent(inout) :: lx
     real(wp), intent(in)    :: x_range
-
-    lx=mod(lx,x_range) + (sign(0.5_wp,-lx) + 0.5)*x_range
+    if(lx .ne. x_range) then
+       lx = mod(lx,x_range)
+    endif
     return
   end subroutine s_shift2range
   ! -------------------------------------------------- !

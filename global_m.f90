@@ -18,7 +18,7 @@ module global_m
   INTEGER nxl0,nyl0,nxlhp0,nylhp0,tnxlhp0,tnylhp0
   INTEGER nxny,nx0y,nx0ylch,nx0y0,nx0y0z,nz0z
   INTEGER nyhp0x0,nylhp0xl0,nxl0yl
-
+  logical :: lident,ldebug
 contains
 
   subroutine global_init
@@ -48,6 +48,8 @@ contains
     call parser_read('Grid nz',nz,100)
     call parser_read('Number of particle',num_p,1)
     call parser_read('Max Lagrangian markers',n_ll,1000)
+    call parser_read('Identical particles flag',lident,.true.)
+    call parser_read('Debug flag',ldebug,.false.)
 
     np=1
     dnp=1

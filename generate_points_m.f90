@@ -10,30 +10,37 @@ contains
 
 !    write(*,*) 'generate_points begin ------'
 
-    do n=1,num_p
+
+    if(lident) then   ! identical particles
        select case(imethod)
        case(1)
-          np = n_l(n)
-          call rand_ellipsoid_points(xa,xb,xc,np,xlp,ylp,zlp)
+          np = n_l(1)
+          call rand_ellipsoid_points(xa,xb,xc,np,xlp(:,1),ylp(:,1),zlp(:,1))
        case(2)
-          call layer_ellipsoid_points(xa,xb,xc,np,xlp,ylp,zlp,mesh_length)
-          n_l(n) = np
-
+          call layer_ellipsoid_points(xa,xb,xc,np,xlp(:,1),ylp(:,1),zlp(:,1),mesh_length)
+          n_l = np
           if(np > n_ll) then
              write(*,*) 'Fatal: too many Lagrangian points'
              write(*,*) np,'>',n_ll
              stop
           end if
        case(3)
-          call read_ellipsoid_points(xlp,ylp,zlp,np)
-          n_l(n) = np
+          call read_ellipsoid_points(xlp(:,1),ylp(:,1),zlp(:,1),np)
+          n_l = np
        end select
-    end do
+    else
+       select case(imethod)
+       case(3)
+          call read_ellipsoid_points_non_identical(xlp,ylp,zlp,n_l)
+       case default
+          write(*,*) "Only reading from file allowed when generating markers for non-identical particles"
+          stop
+       end select
+    endif
 
     xlp = scale_p * xlp     ! scale particle size
     ylp = scale_p * ylp
     zlp = scale_p * zlp
-    
 
   end subroutine generate_points
 
@@ -95,6 +102,63 @@ contains
 
     return
   end subroutine rand_ellipsoid_points
+   ! -------------------------------------------------- !
+  subroutine read_ellipsoid_points_non_identical(x,y,z,n_l)
+    real(wp), intent(inout) :: x(:,:),y(:,:),z(:,:)
+    integer,  intent(out)   :: n_l(:)
+    character(len=120) :: line
+    integer :: istatus,idx,n,i
+
+    open(unit=170, file=sname, STATUS='OLD',iostat=istatus)
+    if(istatus .ne. 0) then
+       write(*,*) 'Problem to open file',sname
+       stop
+    end if
+    
+    i = 0
+   
+    do          ! get the # of particles 
+       read(170, '(A)', iostat=istatus) line
+       if (istauts > 0) then
+          write(*,*) sname,' opening problemactic: # not matching?'
+          stop
+       else if(istatus < 0) then       ! end of file
+          exit
+       else
+          ! Search for "number#"
+          idx = index(line, 'number#')
+          if(idx > 0) then
+             i = i+1
+          endif
+       endif
+    enddo
+
+    if( i .ne. num_p) then
+       write(*,*) "Fatal: # particles in Lagrangian marker file doesn't match # specified in input:",n,i 
+       stop
+    endif
+
+    rewind(170)
+
+    np = 0
+    i  = 0
+    do 
+       read(170, '(A)', iostat=istatus) line
+       if(istatus /= 0)   exit
+       idx = index(line, 'number#')
+       
+       if(idx > 0) then
+          np = 0
+          i = i+1
+       else
+
+          np = np + 1
+          read(line,*)  x(np,i),y(np,i),z(np,i)
+          n_l(i) = np
+       endif
+    enddo
+    close(170)
+  end subroutine read_ellipsoid_points_non_identical
   ! -------------------------------------------------- !
   subroutine read_ellipsoid_points(x,y,z,np)
     real(wp), intent(inout) :: x(:),y(:),z(:)
@@ -107,12 +171,12 @@ contains
        write(*,*) 'Problem to open file',sname
        stop
     end if
-
+    
     read(170,*)              ! heading line
     do
        read(170,*,IOSTAT=istatus)  x(np),y(np),z(np)
        if (istatus > 0)  then
-          write(*,*) sname, 'cannot be opened'
+          write(*,*) sname, 'problematic: too few points in file!'
           stop
        else if (istatus < 0) then  ! end of file reached 
           exit
@@ -125,6 +189,7 @@ contains
        end if
     end do
     np = np - 1     ! adjust
+
     close(170)
   end subroutine read_ellipsoid_points
   ! -------------------------------------------------- !

@@ -111,11 +111,17 @@ c     Calculating the dirac delta function in the z direction
             enddo
          endif
 
-      else                      ! no special treatment in z
-         do k=k1,k2    !>>>  markers can only stay in the middle along z direction                   
-            hz = abs(zets(k-1)-zets(k+1))/2.d0    
-            R=dabs(zets(k)-z_o(l1,n1))/hz
-            call FI_3point(R)
+      else                      
+         do k=k1,k2             
+            if(k .eq. 1 .or. k .eq. 2) then
+               call FI_2point(z_o(l1,n1),k,1)
+            elseif(k .eq. nz .or. k .eq. nzm) then
+               call FI_2point(z_o(l1,n1),k,nz)
+            else
+               hz = abs(zets(k-1)-zets(k+1))/2.d0
+               R=dabs(zets(k)-z_o(l1,n1))/hz
+               call FI_3point(R)
+            endif
             dum3(k)=FI
          enddo
       endif

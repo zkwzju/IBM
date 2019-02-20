@@ -399,6 +399,7 @@ C$OMP END PARALLEL DO
            t_step = (1.0D0-frac_step)*dtcr
            
            if(ibm_moving .eq.1)  call particle_motion(dt,t_step,irk)
+
            if(lcheck)   call cal_u_diff(irk)
            if(.not. lrigid) then
               do n=1,num_p
@@ -432,7 +433,7 @@ c
       integer nblock,nremain,nn
       
 
-!      if(irk .eq. 1 .or. irk .eq. 2) return  ! write if only irk=3
+      if(irk .eq. 1 .or. irk .eq. 2) return  ! write if only irk=3
 
       diff_v = 0.0D0
       
@@ -471,25 +472,30 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
                enddo
             enddo
             
-            diff_v(l,n)=diff_v(l,n)-v_p(l,n)   ! vel difference
+            diff_v(l,n)=diff_v(l,n)-v_p(l,n) ! vel difference
 
-         enddo
-         
-         nblock=ceiling(n_ll*1.d0/MaxPerLine)
-         nremain=mod(n_ll,MaxPerLine)
-         write(666,'(ES16.8)',advance='no') rtime
-         do nn=1,nblock
-            if(nn .eq. nblock) then
-               write(666,'(<nremain>ES16.8)') (diff_v(l,n),
-     &          l=(nn-1)*MaxPerLine+1,n_l(n))
-            else
-               write(666,'(<MaxPerLine>ES16.8)') (diff_v(l,n),
-     &          l=(nn-1)*MaxPerLine+1,nn*MaxPerLine)
-            endif
          enddo
       enddo
 C$OMP END PARALLEL DO
-
+         
+      if(lunformatted) then
+         write(666) rtime,diff_v
+      else
+         nblock=ceiling(n_ll*1.d0/MaxPerLine)
+         nremain=mod(n_ll,MaxPerLine)
+         do n=1,num_p
+            write(666,'(ES16.8)',advance='no') rtime
+            do nn=1,nblock
+               if(nn .eq. nblock) then
+                  write(666,'(<nremain>ES16.8)') (diff_v(l,n),
+     &                 l=(nn-1)*MaxPerLine+1,n_l(n))
+               else
+                  write(666,'(<MaxPerLine>ES16.8)') (diff_v(l,n),
+     &                 l=(nn-1)*MaxPerLine+1,nn*MaxPerLine)
+               endif
+            enddo
+         enddo
+      endif
       
       end subroutine
 

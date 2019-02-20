@@ -1,10 +1,10 @@
 module ellip_common_m
   use precision_m
   use rng_m
-  use common_m, only: x_o,y_o,z_o,x_c,y_c,z_c,rx_l,ry_l,rz_l,u_p,v_p,w_p,u_c,v_c,w_c,om_x,om_y,om_z,xets,yets,zets,p_iw,p_ie,p_js,p_jn,p_kb,p_kt,deltaz,deltax,deltay,rlenx,rleny,rlenz,hrlenz,n_l,n_ll,nx,ny,nz,num_p,dv_l,itime,u,v,w,cell_v,pi
+  use common_m, only: x_o,y_o,z_o,x_c,y_c,z_c,rx_l,ry_l,rz_l,u_p,v_p,w_p,u_c,v_c,w_c,om_x,om_y,om_z,xets,yets,zets,p_iw,p_ie,p_js,p_jn,p_kb,p_kt,deltaz,deltax,deltay,rlenx,rleny,rlenz,hrlenz,n_l,n_ll,nx,ny,nz,num_p,dv_l,itime,u,v,w,cell_v,pi,lident
   implicit none
   integer, allocatable :: x_0(:),x_1(:),y_0(:),y_1(:),z_0(:),z_1(:)
-  real(wp), allocatable :: xlp(:),ylp(:),zlp(:)
+  real(wp), allocatable :: xlp(:,:),ylp(:,:),zlp(:,:)
   real(wp)              :: S_ellp   ! aproximate surface area
   real(wp)              :: vol_ellip
   real(wp)              :: om_ellip(3),om_ellip_b(3)
