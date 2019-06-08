@@ -3,7 +3,8 @@
      &     torq_x,torq_y,torq_z,lcheck,lconvect
       use p_dyn_m
       use common_m
-      use ellip_common_m, only : lunformatted
+      use ellip_common_m, only : lunformatted,lcheckmarker,nmarker,
+     &     marker_ind
       implicit none
 c
 c This subroutine creates the forcing function (forcing_xyz)
@@ -203,8 +204,20 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
             for_py(n)=for_py(n)+v_forcing(l,n)*temp_var
             for_pz(n)=for_pz(n)+w_forcing(l,n)*temp_var
          enddo
+
       enddo
 C$OMP END PARALLEL DO
+!>>>
+      if(lcheckmarker) then
+!     particle velocity difference temperart output
+         do i=1,nmarker
+            n = marker_ind(i,1)
+            l = marker_ind(i,2)
+            write(355,'(I10,I6,3E15.7)') itime,i,up_tilde(n,l),
+     &           vp_tilde(n,l),wp_tilde(n,l)
+         enddo
+      endif
+!<<<
       do n=1,num_p
          torq_x(n)=0.d0
          torq_y(n)=0.d0

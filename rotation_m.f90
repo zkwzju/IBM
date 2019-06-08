@@ -1,6 +1,8 @@
 module rotation_m
   use precision_m
   implicit none
+  !integer,parameter :: wp=selected_real_kind(15,307)
+  
 
   private
   public :: rotation_leapfrog

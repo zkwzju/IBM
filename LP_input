@@ -51,6 +51,8 @@ Prestep fraction			: 0.0
 Non-uniform z-grid			: 0
 Z-grid stretching parameter		: 0.99
 Additional checking flag		: 0
+Markers to check fluid velocity		: 1 10
+					  1 20	
 Lagrangian makers file 	: dot2.dat !lagrangian_pts.plt_
 
 Lagrangian weights file			: lagrangian_weights.dat

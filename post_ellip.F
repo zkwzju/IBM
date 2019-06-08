@@ -146,7 +146,7 @@ c     to calculate the Lagrangian volume
                write(*,*) sname_w, 'cannot be opened'
                stop
             else if (istatus < 0) then ! end of file reached
-               write(*,*) 'Too few markers in file'
+               write(*,*) 'Too few weights given in file'
                stop
             end if
          end do

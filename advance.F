@@ -486,7 +486,7 @@ C$OMP END PARALLEL DO
          do n=1,num_p
             write(666,'(ES16.8)',advance='no') rtime
             do nn=1,nblock
-               if(nn .eq. nblock) then
+               if(nn .eq. nblock .and. nremain .ne. 0) then
                   write(666,'(<nremain>ES16.8)') (diff_v(l,n),
      &                 l=(nn-1)*MaxPerLine+1,n_l(n))
                else

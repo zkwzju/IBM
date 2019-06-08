@@ -115,6 +115,7 @@ contains
     implicit none
     integer, intent(inout)  :: ibm_moving
     character(len=120)      :: input,command_buffer,strFile
+    character(len=120), allocatable :: buffer(:)
     real(wp) :: p,mass 
     integer  :: imove
     integer  :: i,Np,istatus
@@ -311,6 +312,21 @@ contains
 
     call parser_read('Lagrangian weights file',sname_w,'lagrangian_weights.dat')
 
+    ! read checking points
+    call parser_is_defined('Markers to check fluid velocity',lcheckmarker) 
+    if(lcheckmarker) then
+       open(unit=355, file='fluid_vel_at_markers')
+       call parser_getsize('Markers to check fluid velocity',nmarker)
+       nmarker = nmarker/2
+       allocate(buffer(nmarker*2))
+       allocate(marker_ind(nmarker,2))
+       call parser_read('Markers to check fluid velocity',buffer)
+       do i=1,nmarker
+          read(buffer(2*(i-1)+1),*) marker_ind(i,1)
+          read(buffer(2*(i-1)+2),*) marker_ind(i,2)
+       enddo
+    end if
+       
     !    write(*,*) 'initialize_ellip done'
   end subroutine initialize_ellip
   ! ------------------------------------------------------------ !
