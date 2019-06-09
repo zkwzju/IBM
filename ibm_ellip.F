@@ -191,6 +191,16 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
       enddo
 C$OMP END PARALLEL DO
 
+      ! To output interpolated fluid velocity at specified markers
+      if(lcheckmarker) then
+         do i=1,nmarker
+            n = marker_ind(i,1)
+            l = marker_ind(i,2)
+            write(355,'(I10,I6,3E15.7)') itime,i,up_tilde(l,n),
+     &           vp_tilde(l,n),wp_tilde(l,n)
+         enddo
+      endif
+
       do n=1,num_p
          for_px(n)=0.d0
          for_py(n)=0.d0
@@ -207,17 +217,8 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
 
       enddo
 C$OMP END PARALLEL DO
-!>>>
-      if(lcheckmarker) then
-!     particle velocity difference temperart output
-         do i=1,nmarker
-            n = marker_ind(i,1)
-            l = marker_ind(i,2)
-            write(355,'(I10,I6,3E15.7)') itime,i,up_tilde(n,l),
-     &           vp_tilde(n,l),wp_tilde(n,l)
-         enddo
-      endif
-!<<<
+
+
       do n=1,num_p
          torq_x(n)=0.d0
          torq_y(n)=0.d0
