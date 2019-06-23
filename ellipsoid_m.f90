@@ -110,6 +110,60 @@ contains
   end subroutine init_location
   ! -------------------------------------------------- !
 
+  subroutine init_velocity
+    use parser_m
+    implicit none
+    character(len=120), allocatable :: buffer(:)
+    logical :: lvelocity
+    integer :: i, nvelocity
+        ! setting marker moving velocity
+    call parser_is_defined('Particles initial translational velocity (x,y,z)',lvelocity)
+    if(lvelocity) then
+       call parser_getsize('Particles initial translational velocity (x,y,z)',nvelocity) 
+       if(nvelocity/3 .ne. num_p) then
+          write(*,*) "Problem: number of values for Particles initial velocity!"
+          stop
+       endif
+       allocate(buffer(3*num_p))
+       call parser_read('Particles initial translational velocity (x,y,z)',buffer)
+       do i=1,num_p
+          read(buffer(i*3-2),*) u_c(i)
+          read(buffer(i*3-1),*) v_c(i)
+          read(buffer(i*3  ),*) w_c(i)
+       enddo
+       deallocate(buffer)
+    else
+       u_c = 0.0_wp                ! zero initial velocity
+       v_c = 0.0_wp
+       w_c = 0.0_wp
+    endif
+    
+    ! read initial rotational speed
+    call parser_is_defined('particles initial angular velocity (x,y,z)',lvelocity)
+    if(lvelocity) then
+       call parser_getsize('particles initial angular velocity (x,y,z)',nvelocity)   ! nmarker re-used
+       if(nvelocity/3 .ne. num_p) then
+          write(*,*) "Problem: number of values for Particles initial angular velocity !"
+          stop
+       endif
+       allocate(buffer(3*num_p))
+       call parser_read('particles initial angular velocity (x,y,z)',buffer)
+       do i=1,num_p
+          read(buffer(i*3-2),*) om_x(i)
+          read(buffer(i*3-1),*) om_y(i)
+          read(buffer(i*3  ),*) om_z(i)
+       enddo
+       deallocate(buffer)
+    else
+       om_x = 0.0_wp               ! zero angular velocity
+       om_y = 0.0_wp
+       om_z = 0.0_wp
+    endif
+
+  end subroutine init_velocity
+  
+  ! -------------------------------------------------- !
+  
   subroutine initialize_ellip(ibm_moving)
     use parser_m
     implicit none
@@ -119,7 +173,7 @@ contains
     real(wp) :: p,mass 
     integer  :: imove
     integer  :: i,Np,istatus
-    logical  :: lflag,laxis1,laxis2,laxis3,linertia,lvol,ldirection
+    logical  :: lflag,laxis1,laxis2,laxis3,linertia,lvol,ldirection,lmarker_vel
     real(wp) :: axis1(3),axis2(3),axis3(3)
 
     ! particle orientation vetors
@@ -325,8 +379,9 @@ contains
           read(buffer(2*(i-1)+1),*) marker_ind(i,1)
           read(buffer(2*(i-1)+2),*) marker_ind(i,2)
        enddo
+       deallocate(buffer)
     end if
-       
+
     !    write(*,*) 'initialize_ellip done'
   end subroutine initialize_ellip
   ! ------------------------------------------------------------ !

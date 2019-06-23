@@ -146,15 +146,14 @@ cccccccccccccccccccccccccccccccccccccccccccccccc GA cccccccccccccccccc
          if (ibm_moving .eq. 1 .and. icount .eq. 1) then
             call ellipsoid(lgeneration=.false.)
             call post_ellip
-
+            
          endif
          icount=1
          if (ibm_moving .eq. 2 .and. irkk .eq. 3) then
-            call ellipsoid(lgeneration=.false.)
-            call post_ellip
-
-         endif
+            ! do nothing special
             
+         endif
+         
          if (FLTIMER) call begin_timer(54)
 
          call ibm_ellip(cfnl2,cfdif)

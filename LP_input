@@ -1,7 +1,7 @@
 Grid nx				: 20
 Grid ny				: 50
 Grid nz				: 21
-Number of particle		: 1
+Number of particle		: 2
 Max Lagrangian markers		: 2  
  
 
@@ -64,6 +64,10 @@ Lagrangian weights file			: lagrangian_weights.dat
 ! Surface mesh length		: 0.1
 
 
+Particles initial translational velocity (x,y,z)	: 0 0 0
+							 0 0 0	
+Particles initial angular velocity (x,y,z)		: 0 0 0
+							0 0 0	
 ch_file	       		: vel
 sp_file	       		: sph
 rlenx	       		: 20

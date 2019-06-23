@@ -120,9 +120,9 @@ module common_m
   real*8,allocatable,dimension(:,:,:,:,:) ::  ddf
 
   real*8,allocatable,dimension(:) ::  x_c,y_c,z_c,u_c,v_c,w_c,om_x,om_y,om_z
-  real*8,allocatable,dimension(:) :: cell_v
-  real*8,allocatable,dimension(:,:) ::  x_o,y_o,z_o,dv_l,ds,marker_v
-  real*8,allocatable,dimension(:,:) ::  rx_l,ry_l,rz_l
+  real*8,allocatable,dimension(:) ::  cell_v
+  real*8,allocatable,dimension(:,:) :: x_o,y_o,z_o,dv_l,ds,marker_v
+  real*8,allocatable,dimension(:,:) :: rx_l,ry_l,rz_l
   real*8,allocatable,dimension(:) ::  c_d_total,c_lx_total,c_lz_total
   real*8,allocatable,dimension(:) ::  c_d_avg,c_lx_avg,c_lz_avg
   real*8,allocatable,dimension(:) ::  moment_x,moment_y,moment_z
@@ -187,41 +187,6 @@ contains
     allocate( wbct(nx0,ny0),wbcb(nx0,ny0) )
     allocate( ttbct(nx0,ny0),ttbcb(nx0,ny0) )
     allocate( gy(nyl0,nz),gz(nyl0,nz) )
-
-
-
-    allocate(   um(nz,np),vm(nz,np),wm(nz,np),ttm(nz,np)&
-         ,u2m(nz,np),v2m(nz,np),w2m(nz,np),tt2m(nz,np)&
-         ,u3m(nz,np),v3m(nz,np),w3m(nz,np),tt3m(nz,np)&
-         ,u4m(nz,np),v4m(nz,np),w4m(nz,np),tt4m(nz,np)&
-         ,uvm(nz,np),uwm(nz,np),uttm(nz,np)&
-         ,vwm(nz,np),vttm(nz,np)&
-         ,wttm(nz,np) )
-    allocate(   uxm( nz,np),uym( nz,np),uzm( nz,np) &
-         ,ux2m(nz,np),uy2m(nz,np),uz2m(nz,np)&
-         ,ux3m(nz,np),uy3m(nz,np),uz3m(nz,np)&
-         ,ux4m(nz,np),uy4m(nz,np),uz4m(nz,np) )
-    allocate(   vxm( nz,np),vym( nz,np),vzm( nz,np)&
-         ,vx2m(nz,np),vy2m(nz,np),vz2m(nz,np)&
-         ,vx3m(nz,np),vy3m(nz,np),vz3m(nz,np)&
-         ,vx4m(nz,np),vy4m(nz,np),vz4m(nz,np) )
-    allocate(   wxm( nz,np),wym( nz,np),wzm( nz,np)&
-         ,wx2m(nz,np),wy2m(nz,np),wz2m(nz,np)&
-         ,wx3m(nz,np),wy3m(nz,np),wz3m(nz,np)&
-         ,wx4m(nz,np),wy4m(nz,np),wz4m(nz,np) )
-    allocate(   ttxm( nz,np),ttym( nz,np),ttzm( nz,np)&
-         ,ttx2m(nz,np),tty2m(nz,np),ttz2m(nz,np)&
-         ,ttx3m(nz,np),tty3m(nz,np),ttz3m(nz,np)&
-         ,ttx4m(nz,np),tty4m(nz,np),ttz4m(nz,np) )
-    allocate(   uespxm(nxh,nz,np),uespym(nyh,nz,np) )
-    allocate(   vespxm(nxh,nz,np),vespym(nyh,nz,np) )  
-    allocate(   wespxm(nxh,nz,np),wespym(nyh,nz,np) )  
-    allocate(   pwm(nz,np),pm(nz,np)&
-         ,u2wm(nz,np),v2wm(nz,np)&
-         ,uuzm(nz,np),uwxm(nz,np)&
-         ,vvzm(nz,np),vwym(nz,np)&
-         ,wwzm(nz,np) )
-
     !     common variables used by the ibm
     allocate(   xets(nx0),yets(ny0),xets4(-1:nx0+1),yets4(-1:ny0+1) )
     allocate(   forcing_x(nx0,ny0,nz),forcing_y(nx0,ny0,nz),forcing_z(nx0,ny0,nz) )

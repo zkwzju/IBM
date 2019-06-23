@@ -17,7 +17,6 @@ module ellip_common_m
   real(wp), allocatable :: for_px(:),for_py(:),for_pz(:)
   real(wp), allocatable :: torq_x(:),torq_y(:),torq_z(:)
   
-  
   real(wp) :: xa,xb,xc
   real(wp) :: mesh_length
   real(wp) :: v0_l

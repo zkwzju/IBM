@@ -86,10 +86,10 @@ c     to calculate the Lagrangian volume
             stop
          end select
       endif
-      dv_l = dv_l * scale_dv      ! for invistigating purpose
+      dv_l = dv_l * scale_dv      
 
 
-      if(itime .eq. 0) then
+      if(itime .eq. 0 .and. .false.) then       ! turned off output
          open(101,file='dv_l.dat',action='write')
          do n=1,num_p
             write(101,*) 'particle #',n

@@ -14,51 +14,51 @@ c     loop over the time steps
       do itime = itfirst,iend
 
 c     write the time step number to logfile
-        if (mod((itime-istart),oi_cfl).eq.0) then
-          write(26,*)' '
-          write(26,*)' itime =  ',itime
-          write(26,*)' '
-        endif
-c
-        if(ldebug) write(*,*) 'main_run: before advance(0)'
+         if (mod((itime-istart),oi_cfl).eq.0) then
+            write(26,*)' '
+            write(26,*)' itime =  ',itime
+            write(26,*)' '
+         endif
+c     
+         if(ldebug) write(*,*) 'main_run: before advance(0)'
 c     perform one complete time step
-        call advance(0)
-        rtime  = rtime+dt
-
-        if(ldebug) write(*,*) 'main_run: after advacnce(0)'
+         call advance(0)
+         rtime  = rtime+dt
+         
+         if(ldebug) write(*,*) 'main_run: after advacnce(0)'
         
 c     produce outputs in Fourier space
 c     output spectra
-        if((mod(itime-istart,oi_spec).eq.0.or.
-     &      mod(itime-istart,oi_mean).eq.0)) then
+!        if((mod(itime-istart,oi_spec).eq.0.or.
+!     &      mod(itime-istart,oi_mean).eq.0)) then
 c u 
-           call make_spec_new(u,espx,dspx,espy,dspy,xrms,
-     &          txrms,yrms,tyrms)
+!           call make_spec_new(u,espx,dspx,espy,dspy,xrms,
+!     &          txrms,yrms,tyrms)
 c     if(mod(itime,oi_mean).eq.0)call make_meanf(u,fmean,tfmean)
-           if(mod(itime-istart,oi_spec).eq.0)
-     &          call spec_out(espx,dspx,espy,dspy,'dspu',itime)
+!           if(mod(itime-istart,oi_spec).eq.0)
+!     &          call spec_out(espx,dspx,espy,dspy,'dspu',itime)
 c v
-           call make_spec_new(v,espx,dspx,espy,dspy,xrms,
-     &          txrms,yrms,tyrms)
+!           call make_spec_new(v,espx,dspx,espy,dspy,xrms,
+!     &          txrms,yrms,tyrms)
 c     if (mod(itime,oi_mean).eq.0)call make_meanf(v,fmean,tfmean)
-           if (mod(itime-istart,oi_spec).eq.0)
-     &          call spec_out(espx,dspx,espy,dspy,'dspv',itime)
+!           if (mod(itime-istart,oi_spec).eq.0)
+!     &          call spec_out(espx,dspx,espy,dspy,'dspv',itime)
 c w
-           call make_spec_new(w,espx,dspx,espy,dspy,xrms,
-     &          txrms,yrms,tyrms)
+!           call make_spec_new(w,espx,dspx,espy,dspy,xrms,
+!     &          txrms,yrms,tyrms)
 c     if (mod(itime,oi_mean).eq.0)call make_meanf(w,fmean,tfmean)
-           if (mod(itime-istart,oi_spec).eq.0)
-     &          call spec_out(espx,dspx,espy,dspy,'dspw',itime)
+!           if (mod(itime-istart,oi_spec).eq.0)
+!     &          call spec_out(espx,dspx,espy,dspy,'dspw',itime)
 c tt
-           if (FLTHRM) then
-              call make_spec_new(tt,espx,dspx,espy,dspy,xrms,
-     &             txrms,yrms,tyrms)
+!           if (FLTHRM) then
+!              call make_spec_new(tt,espx,dspx,espy,dspy,xrms,
+!     &             txrms,yrms,tyrms)
 c     if (mod(itime,oi_mean).eq.0)call make_meanf(tt,fmean,tfmean)
-              if (mod(itime-istart,oi_spec).eq.0)
-     &             call spec_out(espx,dspx,espy,dspy,'dspT',itime)
+!              if (mod(itime-istart,oi_spec).eq.0)
+!     &             call spec_out(espx,dspx,espy,dspy,'dspT',itime)
 
-           endif
-        endif
+!           endif
+!        endif
 c
 c     produce outputs in real space
         if( mod((itime-istart),oi_chan).eq.0.or.

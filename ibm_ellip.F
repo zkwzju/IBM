@@ -196,7 +196,7 @@ C$OMP END PARALLEL DO
          do i=1,nmarker
             n = marker_ind(i,1)
             l = marker_ind(i,2)
-            write(355,'(I10,I6,3E15.7)') itime,i,up_tilde(l,n),
+            write(355,'(I10,2I7,3E15.7)') itime,n,l,up_tilde(l,n),
      &           vp_tilde(l,n),wp_tilde(l,n)
          enddo
       endif

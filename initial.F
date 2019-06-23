@@ -89,12 +89,6 @@ c
       yets4(-1) = -2D0*deltay
       yets4(ny0+1) = yets4(ny0)+deltay
 
-c  compute dt internally for oscillatory flow
-      if(dt.lt.0.d0)then 
-         dt=2.d0*pi/dble(np)/dble(dnp)
-         write(26,*)'computing dt internally: dt = ',dt
-      endif
-c 
 c  make sure ws is magnitude of settling velocity
       ws=abs(ws)
 c
@@ -203,103 +197,6 @@ c
             wci_mimi(i,j)  = 0.d0
             ttcn_mimi(i,j) = 0.d0
             ttci_mimi(i,j) = 0.d0
-         enddo
-      enddo
-C$OMP SECTION
-      do i=1,np
-         do k=1,nz
-            um(   k,i) = 0.d0
-            vm(   k,i) = 0.d0
-            wm(   k,i) = 0.d0
-            ttm(  k,i) = 0.d0
-            u2m(  k,i) = 0.d0
-            v2m(  k,i) = 0.d0
-            w2m(  k,i) = 0.d0
-            tt2m( k,i) = 0.d0
-            u3m(  k,i) = 0.d0
-            v3m(  k,i) = 0.d0
-            w3m(  k,i) = 0.d0
-            tt3m( k,i) = 0.d0
-            u4m(  k,i) = 0.d0
-            v4m(  k,i) = 0.d0
-            w4m(  k,i) = 0.d0
-            tt4m( k,i) = 0.d0
-            uvm(  k,i) = 0.d0
-            uwm(  k,i) = 0.d0
-            uttm( k,i) = 0.d0
-            vwm(  k,i) = 0.d0
-            vttm( k,i) = 0.d0
-            wttm( k,i) = 0.d0
-c     
-            uxm(  k,i) = 0.d0
-            uym(  k,i) = 0.d0
-            uzm(  k,i) = 0.d0
-            vxm(  k,i) = 0.d0
-            vym(  k,i) = 0.d0
-            vzm(  k,i) = 0.d0
-            ttxm( k,i) = 0.d0
-            ttym( k,i) = 0.d0
-            ttzm( k,i) = 0.d0
-c     
-            ux2m( k,i) = 0.d0
-            uy2m( k,i) = 0.d0
-            uz2m( k,i) = 0.d0
-            vx2m( k,i) = 0.d0
-            vy2m( k,i) = 0.d0
-            vz2m( k,i) = 0.d0
-            ttx2m(k,i) = 0.d0
-            tty2m(k,i) = 0.d0
-            ttz2m(k,i) = 0.d0
-c     
-            ux3m( k,i) = 0.d0
-            uy3m( k,i) = 0.d0
-            uz3m( k,i) = 0.d0
-            vx3m( k,i) = 0.d0
-            vy3m( k,i) = 0.d0
-            vz3m( k,i) = 0.d0
-            ttx3m(k,i) = 0.d0
-            tty3m(k,i) = 0.d0
-            ttz3m(k,i) = 0.d0
-c     
-            ux4m( k,i) = 0.d0
-            uy4m( k,i) = 0.d0
-            uz4m( k,i) = 0.d0
-            vx4m( k,i) = 0.d0
-            vy4m( k,i) = 0.d0
-            vz4m( k,i) = 0.d0
-            ttx4m(k,i) = 0.d0
-            tty4m(k,i) = 0.d0
-            ttz4m(k,i) = 0.d0
-            pwm(  k,i) = 0.d0
-            pm(   k,i) = 0.d0
-            u2wm( k,i) = 0.d0
-            v2wm( k,i) = 0.d0
-            uuzm( k,i) = 0.d0
-            uwxm( k,i) = 0.d0
-            vvzm( k,i) = 0.d0
-            vwym( k,i) = 0.d0
-            wwzm( k,i) = 0.d0
-         enddo
-      enddo
-C$OMP SECTION
-      do i=1,np
-         do k=1,nz
-            do j=1,nxh
-               uespxm(j,k,i)=0.d0
-               vespxm(j,k,i)=0.d0
-               wespxm(j,k,i)=0.d0
-c               udspxm(j,k,i)=0.d0
-c               vdspxm(j,k,i)=0.d0
-c               wdspxm(j,k,i)=0.d0
-            enddo
-            do j=1,nyh
-               uespym(j,k,i)=0.d0
-               vespym(j,k,i)=0.d0
-               wespym(j,k,i)=0.d0
-c               udspym(j,k,i)=0.d0
-c               vdspym(j,k,i)=0.d0
-c               wdspym(j,k,i)=0.d0
-            enddo
          enddo
       enddo
 C$OMP END SECTIONS
@@ -874,24 +771,18 @@ c         ibm_moving=0  ! 0 for fixed
                        ! 1 for free movement
                        ! 2 for forced movement
 
-c initial position of the sphere(s)
+c initial position of particles
          if(ch_fin.eq.0) then
 
             call init_location
+            call init_velocity
+            c_d_avg  = 0.d0
+            c_lx_avg = 0.d0
+            c_lz_avg = 0.d0
             
-            do n=1,num_p
-               u_c(n)=0.d0    ! initial tanslational Velocity of the sphere
-               v_c(n)=0.d0    !
-               w_c(n)=0.d0    !
-               om_x(n)=0.d0   ! initial angular Velocity of the sphere
-               om_y(n)=0.d0   !
-               om_z(n)=0.d0   !
-               c_d_avg(n)=0.d0
-               c_lx_avg(n)=0.d0
-               c_lz_avg(n)=0.d0
-            enddo
-            icount=0
          endif
+         icount=0
+
          if(ch_fin.eq.1) then
             open(126,file=anum(sp_file,istart),form=format_mode)
             rewind(126)

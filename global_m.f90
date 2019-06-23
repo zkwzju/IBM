@@ -51,9 +51,6 @@ contains
     call parser_read('Identical particles flag',lident,.true.)
     call parser_read('Debug flag',ldebug,.false.)
 
-    np=1
-    dnp=1
-
     m=1
     nxl=3*nx/2
     nyl=3*ny/2
