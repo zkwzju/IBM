@@ -797,7 +797,7 @@ c initial position of particles
             icount=0
          endif
 c     ================================================== c
-         call initialize_ellip(ibm_moving)
+         call initialize_ellip
 
          call ellipsoid(lgeneration=.true.)
          call post_ellip

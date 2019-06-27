@@ -65,9 +65,11 @@ Lagrangian weights file			: lagrangian_weights.dat
 
 
 Particles initial translational velocity (x,y,z)	: 0 0 0
-							 0 0 0	
+							  0 0 0	
 Particles initial angular velocity (x,y,z)		: 0 0 0
-							0 0 0	
+							  0 0 0	
+Particles oscilation wave number and initial phase	: 1 0
+							  1 0	
 ch_file	       		: vel
 sp_file	       		: sph
 rlenx	       		: 20

@@ -16,12 +16,14 @@ module ellip_common_m
   real(wp)              :: grav(3)
   real(wp), allocatable :: for_px(:),for_py(:),for_pz(:)
   real(wp), allocatable :: torq_x(:),torq_y(:),torq_z(:)
+  real(wp), allocatable :: n_wave(:),phase0(:)
   
   real(wp) :: xa,xb,xc
   real(wp) :: mesh_length
   real(wp) :: v0_l
   real(wp) :: scale_dv,scale_p
   real(wp) :: frac_step,aalpha
+  
   integer  :: imethod
   integer  :: iweight,iflag_ibm,nmarker
   logical  :: lexact_weight,lupdate_dv,lrigid,lnonuniform,lrotation,ltranslation

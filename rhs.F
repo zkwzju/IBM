@@ -109,6 +109,7 @@ c
       SUBROUTINE rhs(cfnl2,cfdif)
       use ellipsoid_m
       use common_m
+      implicit none
       REAL*8 cfnl2,cfdif
 c
 c     find right hand side of helmholtz eqn for the three components of 
@@ -149,9 +150,13 @@ cccccccccccccccccccccccccccccccccccccccccccccccc GA cccccccccccccccccc
             
          endif
          icount=1
-         if (ibm_moving .eq. 2 .and. irkk .eq. 3) then
-            ! do nothing special
-            
+         if (ibm_moving .eq. 2 .and. irkk .eq. 3) then ! harmonic oscilation
+            do i=1,num_p
+               u_c(i) = 0.d0
+               v_c(i) = cos(n_wave(i)*rtime+phase0(i))
+               w_c(i) = 0.d0
+            enddo
+            call Lag_vel        ! Lagrangian markers velocity
          endif
          
          if (FLTIMER) call begin_timer(54)

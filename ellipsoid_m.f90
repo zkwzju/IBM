@@ -1,6 +1,6 @@
 module ellipsoid_m
   use ellip_common_m
-  use common_m, only : irkk,marker_v,lident,ldebug
+  use common_m, only : irkk,marker_v,lident,ldebug,ibm_moving
   implicit none
 contains
   ! -------------------------------------------------- !
@@ -13,7 +13,8 @@ contains
     call parser_read('Moving wall velocity (bottom)',vb_l,0.0_wp)
     call parser_read('Initial v field',v0_l,1.0_wp)
     call parser_read('Linear v field flag',llinear_v,.false.)
-
+    call parser_read('Movement type',ibm_moving,0)
+    
     ! a,b,c are along x,y,z, respectively
     call parser_read('Ellipsoid semi-axis a',xa,1.0_wp)
     call parser_read('Ellipsoid semi-axis b',xb,1.0_wp)
@@ -82,19 +83,20 @@ contains
              write(*,*) strFile, 'problematic'
              stop
           else if (istatus < 0) then  ! end of file reached
-             write(*,*) "particles location in file doesn't match particles number",n,num_p
+             write(*,*) "Particles location in file doesn't match particles number",n,num_p
              stop
           else
              if(x0 <0 .or. y0<0 .or. z0 > rlenz/2.0_wp .or. z0 < -rlenz/2.0_wp) then
                 write(*,*) "Particle is initially outside of the channel!"
                 stop
              endif
+
              x_c(n) = mod(x0,rlenx)
              y_c(n) = mod(y0,rleny)
              z_c(n) = z0
           end if
-
        end do
+
        close(170)
     else                   ! set particles location from single input
        do n=1,num_p
@@ -139,15 +141,15 @@ contains
     endif
     
     ! read initial rotational speed
-    call parser_is_defined('particles initial angular velocity (x,y,z)',lvelocity)
+    call parser_is_defined('Particles initial angular velocity (x,y,z)',lvelocity)
     if(lvelocity) then
-       call parser_getsize('particles initial angular velocity (x,y,z)',nvelocity)   ! nmarker re-used
+       call parser_getsize('Particles initial angular velocity (x,y,z)',nvelocity)   ! nmarker re-used
        if(nvelocity/3 .ne. num_p) then
           write(*,*) "Problem: number of values for Particles initial angular velocity !"
           stop
        endif
        allocate(buffer(3*num_p))
-       call parser_read('particles initial angular velocity (x,y,z)',buffer)
+       call parser_read('Particles initial angular velocity (x,y,z)',buffer)
        do i=1,num_p
           read(buffer(i*3-2),*) om_x(i)
           read(buffer(i*3-1),*) om_y(i)
@@ -160,14 +162,31 @@ contains
        om_z = 0.0_wp
     endif
 
+    ! for forced motion only 
+    if(ibm_moving .eq. 2) then
+       allocate(n_wave(num_p))
+       allocate(phase0(num_p))
+       n_wave = 0.0_wp
+       phase0 = 0.0_wp
+       call parser_is_defined('Particles oscilation wave number and initial phase',lvelocity)
+       if(lvelocity) then
+          allocate(buffer(2*num_p))
+          call parser_read('Particles oscilation wave number and initial phase',buffer)
+          do i=1,num_p
+             read(buffer(i*2-1),*) n_wave(i)
+             read(buffer(i*2)  ,*) phase0(i)
+          enddo
+          deallocate(buffer)
+       endif
+    endif
+
   end subroutine init_velocity
   
   ! -------------------------------------------------- !
   
-  subroutine initialize_ellip(ibm_moving)
+  subroutine initialize_ellip
     use parser_m
     implicit none
-    integer, intent(inout)  :: ibm_moving
     character(len=120)      :: input,command_buffer,strFile
     character(len=120), allocatable :: buffer(:)
     real(wp) :: p,mass 
@@ -297,24 +316,6 @@ contains
        end do
        close(170)
     endif
-
-
-       
-
-    ! initial rotational velocity
-    om_ellip   = 0.0_wp
-    om_ellip_b = 0.0_wp
-
-    call parser_read('Movement type',imove,0)
-    select case(imove)
-    case(0)     ! still
-       ibm_moving = 0
-    case(1)     ! free movement 
-       ibm_moving = 1
-    case(2)     ! specific movement
-       ibm_moving = 2
-    end select
-
 
 
     call parser_read('Lagrangian markers generation method',imethod,2)
@@ -685,7 +686,8 @@ contains
   ! -------------------------------------------------- !
   subroutine correlation(nlm)
     use common_m
-
+    use, intrinsic :: iso_c_binding, only: c_size_t
+    use IFPORT
     implicit none
 
     integer, intent(in) :: nlm
@@ -702,7 +704,7 @@ contains
     real(wp) :: mat_G(nlm,nlm),mat_Gsum(nlm,nlm)
     real(wp) :: vec_V(nlm),vec_Vt(1,nlm)
     real(wp) :: inv_mass_non
-
+    integer (C_SIZE_T) array_len, array_size
 
     lwork = 3*n_ll-1
     corr_A = 0.0_wp
@@ -711,7 +713,7 @@ contains
     if(ibm_moving .eq. 0) then
        inv_mass_non = 0.0_wp
     else
-       inv_mass_non = (rho_f*deltax*deltay*maxval(deltaz))/(vol_ellip * rho_p)
+       inv_mass_non = (rho_f*deltax*deltay*maxval(abs(deltaz)))/(vol_ellip * rho_p)
     endif
    
     do n=1,num_p
@@ -755,7 +757,11 @@ contains
           end do
        end do
 
-       corr_A = corr_A + inv_mass_non       ! motion correction 
+       if(ibm_moving .eq. 1) then
+          do i=1,nlm
+             corr_A(i,i) = corr_A(i,i) + inv_mass_non       ! motion correction
+          enddo
+       endif
        
        call DSYEV('V','U',nlm,corr_A,nlm,eig_A, work, lwork, info)
        
@@ -779,17 +785,35 @@ contains
           end do
        end if
 
-       if(scale_dv>2.51_wp/maxval(eig_A)) then
-          write(*,*) 'The maximum eigenvalue in the correlation matrix is:', maxval(eig_A)
+
+       ! sort the eigenvalues
+       array_len = nlm
+       array_size = 8
+       call qsort(eig_A,array_len, array_size,com_function)
+       write(*,*) '=============================='
+       write(*,*) 'The maximum/minimum eigenvalue in the correlation matrix is:', eig_A(1),'/',eig_A(nlm)
+       if(n_ll<5) then          ! write largest 5 eigenvalues
+          write(*,*) 'Correlation matrix largest eigenvalues:',eig_A(1:n_ll)
+       else
+          write(*,*) 'Correlation matrix largest eigenvalues:',eig_A(1:5)
+       endif
+ 
+       if(scale_dv>2.51_wp/eig_A(1)) then
           write(*,*) 'Warning: violation of stability condition, too big weight!'
-          write(*,*) scale_dv,'>',2.51_wp/maxval(eig_A)
+          write(*,*) scale_dv,'>',2.51_wp/eig_A(1)
           write(*,*) '!!!!!!!!!!!!!!!!!!'
        endif
+       write(*,*) '=============================='
     end do
 
 
   end subroutine correlation
-
+  ! -------------------------------------------------- !
+  integer(2) function com_function(par1,par2)
+    real(wp) :: par1, par2
+    com_function = par1-par2
+  end function com_function
+  
   ! -------------------------------------------------- !
   function finv(A) result(Ainv)
     implicit none

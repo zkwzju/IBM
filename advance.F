@@ -626,7 +626,7 @@ C$OMP END PARALLEL DO
       it_step = 1.0D0/t_step
       
 !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,om_ellip,ax1,ax2,ax3,up3),
-!$OMP& private(I_ellip,F_v,torq_v,om_ellip_b)
+!$OMP& private(I_ellip,F_v,torq_v,om_ellip_b,xp3)
       do n=1,num_p
 
          om_ellip(1) = om_x(n)
