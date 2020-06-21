@@ -1,17 +1,18 @@
       SUBROUTINE ibm_ellip(cfnl2,cfdif)
       use ellipsoid_m, only: for_px,for_py,for_pz,
-     &     torq_x,torq_y,torq_z,lcheck,lconvect
+     &     torq_x,torq_y,torq_z,lcheck,lconvect,aalpha
       use p_dyn_m
       use common_m
       use ellip_common_m, only : lunformatted,lcheckmarker,nmarker,
-     &     marker_ind
+     &     marker_ind,u_interp,v_interp,w_interp
+      use interp_m
       implicit none
 c
 c This subroutine creates the forcing function (forcing_xyz)
 c that will be added to the rhs of the helmholtz equation 
 c to account for the immersed body (based on H. Lee)
 c
-      INTEGER n,l,i,j,k,i1,i2,j1,j2,k1,k2,nn_l,n_l_refu,
+      INTEGER n,l,i,j,k,i1,i2,j1,j2,k1,k2,nn_l,n_l_refu,ii,
      &           n_l_refv,n_l_refw
       REAL*8 u_tilde(nx0,ny0,nz),v_tilde(nx0,ny0,nz)
       REAL*8 w_tilde(nx0,ny0,nz)
@@ -39,9 +40,11 @@ c      REAL*8 ru_dum(nx0,ny0,nz),rv_dum(nx0,ny0,nz),rw_dum(nx0,ny0,nz)
       INTEGER i_ddf,j_ddf,i_t,j_t,i_f,j_f
 c      REAL*8 p_dum(nz,ny,nx),dp_dum(nz,ny,nx)
       REAL*8 axis1(3),axis2(3),axis3(3)
-      real*8 temp_var
+      real*8 temp_var,intp_error
+      logical lflag
 c--------------------------------------------------------------------
 c--------------------------------------------------------------------
+      if(ldebug) write(*,*) 'ibm_ellip: chekcing point 0'
 c initializing the variables to zero upon every entry for 
 c a new time step
 c
@@ -57,7 +60,7 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n)
          enddo
       enddo
 C$OMP END PARALLEL DO
-c
+
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
       do k=1,nz
          do j=1,ny0
@@ -68,7 +71,6 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
             enddo
          enddo
       enddo
-
 
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
       do k=1,nz
@@ -83,7 +85,7 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
                w_tilde(i,j,k)=w(i,j,k)
      &                        +cfnl2*h3(i,j,k)+2.d0*cfdif*rw(i,j,k)
      &                                       -2.d0*cfdif*dpz(i,j,k)
-!>>>
+
                if(lcheck) then
                   if(lconvect) then
                      forcing_x03(i,j,k) = (
@@ -119,7 +121,9 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k)
       enddo
 C$OMP END PARALLEL DO
 
-!>>>  
+
+         
+
       if(lcheck) then
          call fft_f2r_2d_new(forcing_x03)
          call fft_f2r_2d_new(forcing_y03)
@@ -134,17 +138,77 @@ C$OMP END PARALLEL DO
             forcing_z02=forcing_z03
          endif
       endif
-!<<<         
+
       
       
 c      This section follows the flow solver of M. Uhlmann (2005) to
 c     define the forcing function.
 c
-cc  Transforming the variables to real space
-            call fft_f2r_2d_new(u_tilde)
-            call fft_f2r_2d_new(v_tilde)
-            call fft_f2r_2d_new(w_tilde)
-          
+c     c  Transforming the variables to real space
+      call fft_f2r_2d_new(u_tilde)
+      call fft_f2r_2d_new(v_tilde)
+      call fft_f2r_2d_new(w_tilde)
+
+
+      if(ldebug) write(*,*) 'ibm_ellip: chekcing point 1'
+      
+      if(aalpha .eq. -1) then
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k,vec_in,vec_out)
+         do j=1,ny0
+            do i=1,nx0
+               vec_in = u_tilde(i,j,:)
+               do k=2,nzm
+                  call Chebyshev_uniform(zets,
+     &                 vec_in,nzm,zevn(k),vec_out(k))
+               enddo
+               u_tilde(i,j,2:nzm) = vec_out(2:nzm)
+            end do
+         end do
+C$OMP END PARALLEL DO
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k,vec_in,vec_out)
+         do j=1,ny0
+            do i=1,nx0
+               vec_in = v_tilde(i,j,:)
+               do k=2,nzm
+                  call Chebyshev_uniform(zets,
+     &                 vec_in,nz,zevn(k),vec_out(k),intp_error)
+               enddo
+
+               v_tilde(i,j,2:nzm) = vec_out(2:nzm)
+
+            end do
+         end do
+C$OMP END PARALLEL DO
+
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k,vec_in,vec_out)        
+         do j=1,ny0
+            do i=1,nx0
+               vec_in = w_tilde(i,j,:)
+               do k=2,nzm
+                  call Chebyshev_uniform(zets,
+     &                 vec_in,nzm,zevn(k),vec_out(k))
+               enddo
+               w_tilde(i,j,2:nzm) = vec_out(2:nzm)
+            end do
+         end do
+C$OMP END PARALLEL DO
+
+      endif
+
+      if(ldebug) write(*,*) 'ibm_ellip: chekcing point 2'
+      if(lcheckmarker) then
+         u_fft = u
+         v_fft = v
+         w_fft = w
+         call fft_f2r_2d_new(u_fft)
+         call fft_f2r_2d_new(v_fft)
+         call fft_f2r_2d_new(w_fft)
+         u_interp = 0.d0
+         v_interp = 0.d0
+         w_interp = 0.d0
+         
+      endif
+
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,i1,i2,j1,j2,k1,k2
 C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
       do n=1,num_p
@@ -155,6 +219,19 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
             j2=p_jn(l,n)
             k1=p_kb(l,n)
             k2=p_kt(l,n)
+
+            if(lcheckmarker) then    ! output marker
+               do ii=1,nmarker
+                  if(n .eq. marker_ind(ii,1) .and. l .eq.
+     &                 marker_ind(ii,2)) then
+                     lflag = .true.
+                     exit            ! ii used later
+                  else
+                     lflag = .false.
+                  endif
+               enddo
+            endif
+            
             do i=i1,i2
                i_ddf=i-i1+1
                if(i .lt. 1) then
@@ -180,6 +257,14 @@ C$OMP& ,i,j,k,i_t,j_t,i_ddf,j_ddf)
      &                    *ddf(l,n,i_ddf,j_ddf,k-k1+1)
                      wp_tilde(l,n)=wp_tilde(l,n)+w_tilde(i_t,j_t,k)
      &                    *ddf(l,n,i_ddf,j_ddf,k-k1+1)
+                     if(lcheckmarker .and. lflag) then    ! output marker
+                        u_interp(ii) = u_interp(ii)+u_fft(i_t,j_t,k)
+     &                       *ddf(l,n,i_ddf,j_ddf,k-k1+1)
+                        v_interp(ii) = v_interp(ii)+v_fft(i_t,j_t,k)
+     &                       *ddf(l,n,i_ddf,j_ddf,k-k1+1)
+                        w_interp(ii) = w_interp(ii)+w_fft(i_t,j_t,k)
+     &                       *ddf(l,n,i_ddf,j_ddf,k-k1+1)
+                     endif
                   enddo
                enddo
             enddo
@@ -196,8 +281,10 @@ C$OMP END PARALLEL DO
          do i=1,nmarker
             n = marker_ind(i,1)
             l = marker_ind(i,2)
-            write(355,'(I10,2I7,3E15.7)') itime,n,l,up_tilde(l,n),
-     &           vp_tilde(l,n),wp_tilde(l,n)
+            write(355,'(I10,2I7,3E15.7)') itime,n,l,u_interp(i),
+     &           v_interp(i),w_interp(i)
+c$$$            write(355,'(I10,2I7,3E15.7)') itime,n,l,up_tilde(l,n),
+c$$$     &           vp_tilde(l,n),wp_tilde(l,n)
          enddo
       endif
 
@@ -214,7 +301,6 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
             for_py(n)=for_py(n)+v_forcing(l,n)*temp_var
             for_pz(n)=for_pz(n)+w_forcing(l,n)*temp_var
          enddo
-
       enddo
 C$OMP END PARALLEL DO
 
@@ -239,6 +325,8 @@ C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,temp_var)
       enddo
 C$OMP END PARALLEL DO
 
+
+      
 c Caculating the forcing term on the Eulerian grid
 C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(l,n,i1,i2,j1,j2,k1,k2
 C$OMP& ,i,j,k,i_f,j_f,i_ddf,j_ddf)
@@ -283,6 +371,51 @@ C$OMP& ,i,j,k,i_f,j_f,i_ddf,j_ddf)
          enddo
       enddo
 C$OMP END PARALLEL DO
+
+      if(aalpha .eq. -1) then
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k,vec_in,vec_out,vec_p2)         
+         do j=1,ny0
+            do i=1,nx0
+               vec_in = forcing_x(i,j,:)
+               call spline(zevn,vec_in,nz,0.0_wp,0.0_wp,vec_p2)
+               do k=2,nzm
+                  call uniform_Chebyshev(zevn,vec_in,vec_out,
+     &                 nz,zets(k),vec_out(k))
+               enddo
+               forcing_x(i,j,2:nzm) = vec_out(2:nzm)
+            enddo
+         enddo
+C$OMP END PARALLEL DO         
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k,vec_in,vec_out,vec_p2)         
+         do j=1,ny0
+            do i=1,nx0
+               vec_in = forcing_y(i,j,:)
+
+               call spline(zevn,vec_in,nz,0.0_wp,0.0_wp,vec_p2)
+               do k=2,nzm
+                  call uniform_Chebyshev(zevn,vec_in,vec_p2,
+     &                 nz,zets(k),vec_out(k))
+               enddo
+               forcing_y(i,j,2:nzm) = vec_out(2:nzm)
+            enddo
+         enddo
+C$OMP END PARALLEL DO
+C$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,j,k,vec_in,vec_out,vec_p2)         
+         do j=1,ny0
+            do i=1,nx0
+               vec_in = forcing_z(i,j,:)
+               call spline(zevn,vec_in,nz,0.0_wp,0.0_wp,vec_p2)
+               do k=2,nzm
+                  call uniform_Chebyshev(zevn,vec_in,vec_p2,
+     &                 nz,zets(k),vec_out(k))
+               enddo
+               forcing_z(i,j,2:nzm) = vec_out(2:nzm)
+            enddo
+         enddo
+C$OMP END PARALLEL DO
+      endif
+
+         
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       
@@ -333,29 +466,27 @@ c
          c_lx_cluster=0.d0
          c_lz_cluster=0.d0
          do n=1,num_p
-!            if(mod((itime-istart),oi_chan).eq.0) then
-!               write(175,100) itime,n,c_d_total(n),
-!     &              c_lx_total(n),c_lz_total(n),
-!     &              moment_x(n),moment_y(n),moment_z(n)
-!            endif
             c_d_cluster =c_d_cluster+c_d_total(n)
             c_lx_cluster=c_lx_cluster+c_lx_total(n)
             c_lz_cluster=c_lz_cluster+c_lz_total(n)
          enddo
+
+ 
+         if((ch_fin.eq.1) .and. (itime.eq.istart+1))  goto 6000
+         
          write(114,*) itime,c_lx_cluster
          write(115,*) itime,c_d_cluster
          write(116,*) itime,c_lz_cluster
 
          if(lunformatted) then
-            write(223,rec=itime) itime, c_lx_total
-            write(224,rec=itime) itime, c_d_total
-            write(225,rec=itime) itime, c_lz_total
+            write(223) itime, c_lx_total
+            write(224) itime, c_d_total
+            write(225) itime, c_lz_total
             
-            write(123,rec=itime) itime, moment_x
-            write(124,rec=itime) itime, moment_y
-            write(125,rec=itime) itime, moment_z
+            write(123) itime, moment_x
+            write(124) itime, moment_y
+            write(125) itime, moment_z
          else
-            
             write(223,310) itime,(c_lx_total(n),n=1,num_p)
             write(224,310) itime,(c_d_total(n) ,n=1,num_p)
             write(225,310) itime,(c_lz_total(n),n=1,num_p)
@@ -364,11 +495,13 @@ c
             write(124,310) itime,(moment_y(n),n=1,num_p)
             write(125,310) itime,(moment_z(n),n=1,num_p)
          endif
+ 6000    continue               ! skip first step output when restarting
       endif
-
+ 
+      
  310  format (I7,<num_p>E15.7)
       
-!>>>
+
       if(lcheck) then
          if(irkk .eq. 1) then
             forcing_x1 = forcing_x
@@ -384,7 +517,7 @@ c
             forcing_z3 = forcing_z
          endif
       endif
-!<<<      
+
          
 c     Transforming the forcing function to fourier space
 

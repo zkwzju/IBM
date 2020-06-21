@@ -66,8 +66,6 @@ c     to calculate the Lagrangian volume
       if(lident) then
          do n=1,num_p
             select case (iweight)
-            case(2)
-               dv_l(1:n_l(n),n) = S_ellp/n_l(n) * deltax ! dx=dy=dz
             case(3)
                dv_l = 1.0d0
             case(4)
@@ -89,37 +87,10 @@ c     to calculate the Lagrangian volume
       dv_l = dv_l * scale_dv      
 
 
-      if(itime .eq. 0 .and. .false.) then       ! turned off output
-         open(101,file='dv_l.dat',action='write')
-         do n=1,num_p
-            write(101,*) 'particle #',n
-            write(101,*) dv_l(1:n_l(n),n)
-         enddo
-         close(101)
-
-!     export lagrangian markers coordinates
-         open(unit=170, file='lagrangian_pts.plt', status='unknown')
-         write(170,*) "VARIABLES=x,y,z"
-         do n=1,num_p
-            do l=1,n_l(n)
-               write(170,*) x_o(l,n),y_o(l,n),z_o(l,n)
-            enddo
-         enddo
-         close(170)
-
-!     export arm of force
-         open(unit=170, file='arm_of_force.dat', status='unknown')
-         do n=1,num_p
-            do l=1,n_l(n)
-               write(170,*) rx_l(l,n),ry_l(l,n),rz_l(l,n)
-            enddo
-         enddo
-         close(170)
-      end if
-!>>>
+ 
 !      call correlation(n_ll,vol)
 !      call single_point_test
-!<<<
+
       if(ldebug) write(*,*) 'end: post_ellip'
       end subroutine post_ellip
 

@@ -75,7 +75,10 @@ c
 c     compute h of eqn for tt
         if(FLTHRM) call tt_comp_h(cfnl1)
 c     compute the right hand sides for u, v and w, results stored in u, v and w
+        if(ldebug) write(*,*) 'advance: before rhs'
         call rhs(cfnl2,cfdif)
+        if(ldebug) write(*,*) 'advance: after rhs'
+        
 c     compute the right hand side for tt, result stored in tt
         if (FLTHRM) call tt_rhs(cfnl2,cfdif)
 c
@@ -157,7 +160,7 @@ c     solve the helmholtz equation for tt
      &       tte_mimi,ttci_mimi,ttcn_mimi,
      &       ttprbc1,ttmbct1,ttmbcb1,ttprbcn,ttmbctn,ttmbcbn)
 
-        !>>>
+
 !     particle dynamics before pressure correction for fluid
         if(flagibm  .and. frac_step>0.D0) then
            t_step = frac_step*dtcr
@@ -173,7 +176,7 @@ c     solve the helmholtz equation for tt
               call body_integration_output(irk)
            endif
         endif
-        !<<<
+
         
 c     compute the divergence for the pressure step
 c     the right hand side of eqn for p is stored in rw
@@ -393,7 +396,7 @@ C$OMP PARALLEL DO DEFAULT(SHARED),PRIVATE(i,j,k)
 C$OMP END PARALLEL DO          
         endif
 
-!>>>  
+
 !     particle dynamics after pressure correction for fluid
         if(flagibm  .and. frac_step<1.0D0) then
            t_step = (1.0D0-frac_step)*dtcr
@@ -410,7 +413,7 @@ C$OMP END PARALLEL DO
               enddo
             endif
         endif
-!<<<
+
       enddo                     !irk
 c     
       if (FLTIMER) call end_timer(40)
@@ -626,7 +629,7 @@ C$OMP END PARALLEL DO
       it_step = 1.0D0/t_step
       
 !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(n,om_ellip,ax1,ax2,ax3,up3),
-!$OMP& private(I_ellip,F_v,torq_v,om_ellip_b,xp3)
+!$OMP& private(I_ellip,vol_ellip,rho_p,F_v,torq_v,om_ellip_b,xp3)
       do n=1,num_p
 
          om_ellip(1) = om_x(n)
@@ -645,7 +648,9 @@ C$OMP END PARALLEL DO
          up3(2) = v_c(n)
          up3(3) = w_c(n)
 
-         I_ellip = I_particle(:,n)
+         I_ellip   = I_particle(:,n)
+         vol_ellip = V_particle(n)
+         rho_p     = rho_particle(n)
 
          if(lrigid) then
            
@@ -665,7 +670,8 @@ C$OMP END PARALLEL DO
                   F_v(3) = 0.0D0
                endif
 
-               call part_translation2(xp3,up3,F_v,grav,vol_ellip,t_step)
+               call part_translation2(xp3,up3,F_v,grav,vol_ellip,t_step
+     &              ,rho_p,rho_f)
                
             endif
             if(lrotation) then
@@ -682,11 +688,13 @@ C$OMP END PARALLEL DO
                   torq_v(3) = 0.0D0
                endif
                if(lsphere) then
-                  call part_rotation2(om_ellip, torq_v,I_ellip,t_step)
+                  call part_rotation2(om_ellip, torq_v,I_ellip,t_step
+     &                 ,rho_p,rho_f)
                else
                   torq_v = rho_f*rho_p/(rho_p-rho_f)*torq_v
+
                   call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
-     &                 torq_v,I_ellip,t_step)
+     &                 torq_v,I_ellip,t_step,rho_p,rho_f)
                endif
             endif
          else
@@ -709,7 +717,8 @@ C$OMP END PARALLEL DO
                if(lclip_z) then
                   F_v(3) = 0.0D0
                endif
-               call part_translation(xp3,up3,F_v,grav,vol_ellip,t_step)
+               call part_translation(xp3,up3,F_v,grav,vol_ellip,t_step,
+     &              rho_p,rho_f)
             endif
 
             if(lrotation) then
@@ -730,10 +739,11 @@ C$OMP END PARALLEL DO
                   torq_v(3) = 0.0D0
                endif
                if(lsphere) then
-                  call part_rotation2(om_ellip, torq_v,I_ellip,t_step)
+                  call part_rotation2(om_ellip, torq_v,I_ellip,t_step
+     &                 ,rho_p,rho_f)
                else
                   call part_rotation(ax1,ax2,ax3,om_ellip,om_ellip_b,
-     &                 torq_v,I_ellip,t_step)
+     &                 torq_v,I_ellip,t_step,rho_p,rho_f)
                endif
             endif
             int_u0(n) = int_u1(n)

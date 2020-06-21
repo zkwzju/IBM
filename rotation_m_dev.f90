@@ -298,7 +298,7 @@ contains
        A = Ap
        om_b = 0.5_wp * (omb0+omb1)     ! interpolate to time step
        omb0 = omb1
-       !>>>
+
        write(*,*) sum(A(1,:)**2),sum(A(2,:)**2),sum(A(3,:)**2)
        write(200,'(4ES15.5)') step*dt,omb1
     end do

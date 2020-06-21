@@ -147,7 +147,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccc GA cccccccccccccccccc
          if (ibm_moving .eq. 1 .and. icount .eq. 1) then
             call ellipsoid(lgeneration=.false.)
             call post_ellip
-            
          endif
          icount=1
          if (ibm_moving .eq. 2 .and. irkk .eq. 3) then ! harmonic oscilation
@@ -158,11 +157,15 @@ cccccccccccccccccccccccccccccccccccccccccccccccc GA cccccccccccccccccc
             enddo
             call Lag_vel        ! Lagrangian markers velocity
          endif
+
+         if(ldebug) write(*,*) 'rhs: chekcing point 1'
          
          if (FLTIMER) call begin_timer(54)
 
          call ibm_ellip(cfnl2,cfdif)
 
+         if(ldebug) write(*,*) 'rhs: chekcing point 2'
+         
          if (FLTIMER) call end_timer(54)
 
 C$OMP PARALLEL DO DEFAULT(SHARED),PRIVATE(i,j,k)
@@ -178,14 +181,14 @@ c     &             +dt*forcing_y(i,j,k)-2.d0*cfdif*dpy(i,j,k))*rhsfac
                   w(i,j,k)=(w(i,j,k)+cfnl2*h3(i,j,k)+cfdif*rw(i,j,k)
      &                                  +dt*forcing_z(i,j,k))*rhsfac
 c     &             +dt*forcing_z(i,j,k)-2.d0*cfdif*dpz(i,j,k))*rhsfac
-!>>>               
+
 c               forcing_x0(i,j,k) = (cfnl2*h1(i,j,k)+cfdif*ru(i,j,k))/dt
 c     &              -2.d0*cfdif*dpx(i,j,k))/dt
 c               forcing_y0(i,j,k) = (cfnl2*h2(i,j,k)+cfdif*rv(i,j,k))/dt
 c     &              -2.d0*cfdif*dpy(i,j,k))/dt
 c               forcing_z0(i,j,k) = (cfnl2*h3(i,j,k)+cfdif*rw(i,j,k))/dt
 c     &              -2.d0*cfdif*dpz(i,j,k))/dt
-!<<<
+
                enddo
             enddo
          enddo

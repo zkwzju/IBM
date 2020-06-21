@@ -7,7 +7,7 @@ modified_windows_fn.F timers_m.F fft_m.F flags_m.F advance.F io.F pstep.F  timer
 main.F post_ellip.F initial.F divg.F partial.F  \
 stats.F tt_rhs.F post_proc.F nltrms_up.F gen_helmholz.F     \
 enlred.F fft2d_new.F idminmax.F    \
- del_fn.F ibm_ellip.F  mt19937.F\
+ del_fn.F ibm_ellip.F  \
 #
 INC =  
 #
@@ -17,7 +17,7 @@ XTRA = Makefile chnl.anz_ini \
 OBJS = $(SRC:.F=.o)
 
 ########
-SRC90= generate_points_m.f90 ellip_common_m.f90 p_dyn_m.f90 global_m.f90 init_m.f90 common_m.f90 precision_m.f90 parser_m.f90  ellipsoid_m.f90 rng_m.f90 rotation_m.f90
+SRC90= generate_points_m.f90 ellip_common_m.f90 p_dyn_m.f90 global_m.f90 init_m.f90 common_m.f90 precision_m.f90 parser_m.f90  ellipsoid_m.f90 rng_m.f90 rotation_m.f90 interp_m.f90
 OBJ90=$(SRC90:.f90=.o)
 
 ########
@@ -101,11 +101,12 @@ ellip_common_m.o : common_m.o rng_m.o
 generate_points_m.o : ellip_common_m.o 
 ellipsoid_m.o : generate_points_m.o common_m.o parser_m.o rng_m.o ellipsoid_m.f90
 initial.o     : ellipsoid_m.o initial.F
-rng_m.o	      : rng_m.f90 mt19937.o 
+rng_m.o	      : rng_m.f90  
 del_fn.o      : ellipsoid_m.o del_fn.F
 parser_m.o    : parser_m.f90 precision_m.o
 rho.F	      : ibm_ellip.o rhs.F
-ibm_ellip.o   :	rotation_m.o ellipsoid_m.o ibm_ellip.F
+interp_m.o    : interp_m.f90
+ibm_ellip.o   :	interp_m.o rotation_m.o ellipsoid_m.o ibm_ellip.F
 post_ellip.o  : ellipsoid_m.o
 global_m.o    : parser_m.o
 common_m.o    : global_m.o flags_m.o fft_m.o timers_m.o fft_m.o common_m.f90

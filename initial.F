@@ -1,4 +1,4 @@
-      SUBROUTINE initial(dt0,ch_fin,m_fin)
+      SUBROUTINE initial(dt0,m_fin)
       use ellipsoid_m
       use common_m
       use p_dyn_m
@@ -19,7 +19,7 @@ cccccccccccccccccccccccccccccc GA cccccccccccccccc
       CHARACTER*32 anum
       REAL*8 dztmp
 cccccccccccccccccccccccccccccc GA 
-      INTEGER ch_fin,m_fin
+      INTEGER m_fin
 c
 c     set up the matrices and ffts, initialize the field variables
 c
@@ -29,6 +29,8 @@ c
       REAL*8 condo,condi,emax,emin
       REAL*8 aux_rr,h0,sumtemp !,theta
 
+      if(ldebug) write(*,*) 'initial bigin'
+      
       lwork = nz*(nz+4)
 
       call read_settings
@@ -343,6 +345,11 @@ c set aalpha to 0 for GL pts. Alpha aproaches 1 for uniform. Cannot be 1
         if(aalpha.eq.0)then
            zets(k) = cos(dble(k-1)*pin)
            zets(nz+1-k) = -zets(k)
+        elseif(aalpha .eq. -1) then       ! uniform interpolation
+           zets(k) = cos(dble(k-1)*pin)
+           zets(nz+1-k) = -zets(k)
+           zevn(k) = rlenz/2.0 - rlenz/nzm*(k-1)   
+           zevn(nz+1-k) = -zevn(k)
         else
            zets(k)=asin(aalpha*cos(dble(k-1)*pin))/asin(aalpha)
            zets(nz+1-k) = -zets(k)
@@ -368,10 +375,15 @@ ccccccccccccccccccccccccccccccccccccccccccccc GA
         wzet(k) = sum/dble(nzm)
       endif
 ccccccccccccccccccccccccccccccccccccccccccccc GA ccccccccccccccccccccc
-      do k = 1,nzm/2
-         deltaz(k)=dabs(zets(k+1)-zets(k))
-         deltaz(nz-k) = deltaz(k)
-      enddo
+      if(aalpha .eq. -1) then
+         deltaz = 2.D0/nzm
+      else
+         do k = 1,nzm/2
+            deltaz(k)=dabs(zets(k+1)-zets(k))
+            deltaz(nz-k) = deltaz(k)
+         enddo
+      endif
+     
       wzet(1)=dabs(zets(1)-zets(2))/2.d0
       do k=2,nz-1
          wzet(k)=dabs(zets(k-1)-zets(k+1))/2.d0
@@ -770,110 +782,31 @@ c---------------------------------------------------------------------
 c         ibm_moving=0  ! 0 for fixed
                        ! 1 for free movement
                        ! 2 for forced movement
-
-c initial position of particles
-         if(ch_fin.eq.0) then
-
-            call init_location
-            call init_velocity
-            c_d_avg  = 0.d0
-            c_lx_avg = 0.d0
-            c_lz_avg = 0.d0
-            
-         endif
+ 
          icount=0
 
+         call initialize_ellip
+         
          if(ch_fin.eq.1) then
-            open(126,file=anum(sp_file,istart),form=format_mode)
-            rewind(126)
-            do n=1,num_p
-               read(126) x_c(n),y_c(n),z_c(n),u_c(n),v_c(n),w_c(n),
-     &              om_x(n),om_y(n),om_z(n)
-     &              ,c_d_avg(n),c_lx_avg(n),c_lz_avg(n),icount
-               c_d_avg(n)=0.d0
-               c_lx_avg(n)=0.d0
-               c_lz_avg(n)=0.d0
-            enddo
+            open(130,file=anum(sp_file,istart),form=format_mode)
+            read(130) rho_particle,V_particle,axis_1,axis_2,axis_3,
+     &           I_particle,x_c,y_c,z_c,u_c,v_c,
+     &           w_c,om_x,om_y,om_z,
+     &           for_px,for_py,for_pz,
+     &           torq_x,torq_y,torq_z,
+     &           n_l,xlp,ylp,zlp
+            close(130)
+
             icount=0
          endif
-c     ================================================== c
-         call initialize_ellip
 
-         call ellipsoid(lgeneration=.true.)
+
+         call ellipsoid(lgeneration=.false.)
+
          call post_ellip
-
-         
-c ================================================== c
-         
-c setting indicating facture for points inside a sphere to 0
-C$OMP PARALLEL DO DEFAULT(SHARED),PRIVATE(k,j,i)
-         do k=1,nz
-            do j=1,ny
-               do i=1,nx
-                  if_ibm(i,j,k)=1.d0
-               enddo
-            enddo
-         enddo
-C$OMP END PARALLEL DO
-         do k=1,nz
-            pla_vol_fract(k)=0
-         enddo
-cC$OMP PARALLEL DO DEFAULT(SHARED),PRIVATE(n,k,j,i),
-cC$OMP& REDUCTION(+: pla_vol_fract)
-         do n=1,num_p
-            do k=1,nz
-               dz=dabs(z_c(n)-zets(k))
-               if(dz .gt. rlenz-dz) dz=rlenz-dz
-               do j=1,ny
-                  dy=dabs(y_c(n)-yets(j))
-                  if(dy .gt. rleny-dy) dy=rleny-dy
-                  do i=1,nx
-                     dx=dabs(x_c(n)-xets(i))
-                     if(dx .gt. rlenx-dx) dx=rlenx-dx
-c$$$                     if(dsqrt(dx**2+dy**2+dz**2) .le. r_c) then
-c$$$                        if_ibm(i,j,k)=0.d0
-c$$$                        pla_vol_fract(k) = pla_vol_fract(k)+1
-c$$$                     endif
-                  enddo
-               enddo
-            enddo
-         enddo
-cC$OMP END PARALLEL DO
-         volibm=0.d0
-         do k=1,nz
-            if(k .eq. 1 .or. k .eq. nz) then
-               dztmp=(zets(1)-zets(2))/2.d0
-            else
-               dztmp=(zets(k-1)-zets(k+1))/2.d0
-            endif
-            do j=1,ny
-               do i=1,nx
-                  volibm=volibm+if_ibm(i,j,k)*dztmp
-               enddo
-            enddo
-         enddo
-         volibm_mid=0.d0
-         do k=1,nz
-          if(abs(zets(k)) .lt. 0.64d0*rlenz/2.d0) then
-            if(k .eq. 1 .or. k .eq. nz) then
-               dztmp=(zets(1)-zets(2))/2.d0
-            else
-               dztmp=(zets(k-1)-zets(k+1))/2.d0
-            endif
-            do j=1,ny
-               do i=1,nx
-                  volibm_mid=volibm_mid+if_ibm(i,j,k)*dztmp
-               enddo
-            enddo
-          endif
-         enddo
-         do k=1,nz
-            pla_vol_fract(k) = (dble(nxny)-pla_vol_fract(k))/dble(nxny)
-         enddo
-!         write(173,*) volibm,volibm_mid
       endif
-10    format(11(3x,g15.8))
-ccccccccccccccccccccccccccccccccccccccccccccccc GA
+
+
 c---------------------------------------------------------------------
 c     compute sm_d2 matrix by forming the product sm_d1*sm_d1
 c---------------------------------------------------------------------
@@ -1135,7 +1068,9 @@ c     read mean value and NT
 c
       if (FLTIMER) call end_timer(10)
       return
-122     END
+
+      if(ldebug) write(*,*) 'initial done'
+ 122  END
 c
 c
 c
@@ -1247,190 +1182,6 @@ c      stop
 c
 c
 c
-c     Bad for parallel
-c
-      SUBROUTINE init_uvw
-      use common_m
 
-c
-      INTEGER i,j,k
-      INTEGER jran
-      REAL*8  rnum
-      REAL*8  fac,sum,sum1
-      INTEGER idum,i2d
-      REAL*8  dum
-cccccccccccccccccccccccccccccccccccccccccc GA cccccccccccc
-      REAL*8  ut(96,96,97),vt(96,96,97),wt(96,96,97)
-      INTEGER nzdft,nzdftm,l,flag
-      REAL*8 pindft,hpindft,deltazdft(97),zetsdft(97),r,rr(nz)
-cccccccccccccccccccccccccccccccccccccccccc GA
-c
-      fac=1.d-2
-      i2d=0
-cccccccccccccccccccccccccccccccccccccccccc
-c This is to input from an initialization file
-c set .false. to .true.
-      if(.true.)then
-         open(11,file='ICvel.ini',form=format_mode)
-         rewind(11)
-         read(11) dum,idum,dum,idum,idum,idum,dum,dum,dum
-         read(11) u,v,w
-         read(11) pbxnt,pcxnt,pbynt,pcynt,pbxot,pcxot,pbyot,pcyot
-         read(11) pbxnb,pcxnb,pbynb,pcynb,pbxob,pcxob,pbyob,pcyob
-         close(11)
-cccccccccccccccccccccccccccccccccccccccccc GA cccccccccccc
-      goto 117
-      nzdft = 97
-      nzdftm = nzdft-1
-      pindft  = pi/dble(nzdftm)
-      hpindft = 0.5d0*pindft
-      do j = 1,nzdft/2
-        zetsdft(j) = cos(dble(j-1)*pindft)
-        zetsdft(nzdft+1-j) = -zetsdft(j)
-      enddo
-c
-      do k = 1,nzdftm/2
-        deltazdft(k) = 2.d0*sin(hpindft)*sin(dble(2*k-1)*hpindft)
-        deltazdft(nz-k) = deltazdft(k)
-      enddo
-c
-      do k=1,nzdft
-         zetsdft(k)  = rlenz/2.d0*(zetsdft(k)-1)+rlenz/2.d0
-         deltazdft(k)= deltazdft(k)*rlenz/2.d0
-      enddo 
-c
-      do i=1,96
-         do j=1,96
-            u(i,j,1)=ut(i,j,1)
-            u(i,j,nz)=ut(i,j,nzdft)
-         enddo
-      enddo
-c
-      do k=1,nz
-        rr(k)=0
-      enddo
-      do i=1,96
-         do j=1,96
-            do k=1,nz
-               flag=1
-               do l=1,nzdft
-                  if(zets(k).le.zetsdft(nzdft+1-l).and.flag.eq.1)then
-                     r=abs((zets(k)-zetsdft(nzdft+1-l))/
-     &                   (zetsdft(nzdft+1-l+1)-zetsdft(nzdft+1-l)))
-                     if(i.eq.45.and.j.eq.45)then
-                        rr(k)=r
-                     endif
-                     u(i,j,k)=r*(ut(i,j,nzdft+1-l+1)-ut(i,j,nzdft+1-l))
-     &                          +ut(i,j,nzdft+1-l)
-                     v(i,j,k)=r*(vt(i,j,nzdft+1-l+1)-vt(i,j,nzdft+1-l))
-     &                          +vt(i,j,nzdft+1-l)
-                     w(i,j,k)=r*(wt(i,j,nzdft+1-l+1)-wt(i,j,nzdft+1-l))
-     &                          +wt(i,j,nzdft+1-l)
-                     flag=-1
-                  endif
-               enddo
-            enddo
-         enddo
-      enddo
-117   continue
-cccccccccccccccccccccccccccccccccccccccc GA
-c
-         do k=1,nz
-            do i=1,nx0
-               u(i,ny0,k)=0
-               v(i,ny0,k)=0
-               w(i,ny0,k)=0
-            enddo
-            do j=1,ny
-               u(nx0,j,k)=0
-               v(nx0,j,k)=0
-               w(nx0,j,k)=0
-            enddo
-         enddo
-c
-         if(FLTHRM)then
-            open(11,file='ICconc.ini',form=format_mode)
-            rewind(11)
-            read(11) dum,idum,dum,idum,idum,idum,dum,dum,dum
-            read(11) tt
-            close(11)
-c     This is no normalize tt to integrate to 1
-            sum =0.d0
-            sum1 =0.d0
-            do k=1,nz
-               do j=1,ny
-                  do i=1,nx
-                     call randomgen(jran,rnum)
-                     tt(i,j,k)=(1.d0+fac*rnum)
-                     sum=sum+tt(i,j,k)*wzet(k)
-                     sum1=sum1+wzet(k)
-                  enddo
-               enddo
-            enddo
-            sum=sum/dble(nxny)
-            write(*,*)'sum:',sum
-            write(*,*)'sum1:',sum1/dble(nxny)
-            sum1=0.d0
-            do k=1,nz
-               do j=1,ny
-                  do i=1,nx
-                     tt(i,j,k)=tt(i,j,k)/sum
-                     sum1=sum1+tt(i,j,k)*wzet(k)
-                  enddo
-               enddo
-            enddo
-            write(*,*)'int(tt)/(Lx*Ly*Lz):',sum1/dble(nxny)
-         endif
-      endif
-cccccccccccccccccccccccccccccccccccccccccc
-cc NOTE u, v, and w are initialized to zero above, no need to repeat
-      if(.false..and.FLTHRM)then
-         sum =0.d0
-         do k=1,nz
-            do j=1,ny
-c               if(i2d.eq.1)call randomgen(jran,rnum)
-               do i=1,nx
-c                  if(i2d.eq.0)call randomgen(jran,rnum)
-c                  tt(i,j,k)=(1.d0+fac*rnum)
-                  sum=sum+tt(i,j,k)*wzet(k)
-               enddo
-            enddo
-         enddo         
-         sum=sum/dble(nxny)
-         do k=1,nz
-            do j=1,ny
-               do i=1,nx
-                  tt(i,j,k)=tt(i,j,k)/sum
-               enddo
-            enddo
-         enddo
-      endif
-cccccccccccccccccccccccccccccccccccccccccc
-c
-      call fft_r2f_2d_new(u) 
-      call fft_r2f_2d_new(v) 
-      call fft_r2f_2d_new(w) 
-      if(FLTHRM)call fft_r2f_2d_new(tt)
-      do k=1,nz
-         u(1,1,k)=0.d0
-         w(1,1,k)=0.d0
-      enddo
-      write(16,111)(zets(k),v(1,1,k),u(1,1,k),w(1,1,k),tt(1,1,k),k=1,nz)
-      call fft_f2r_2d_new(u) 
-      call fft_f2r_2d_new(v) 
-      call fft_f2r_2d_new(w) 
-      if(FLTHRM)call fft_f2r_2d_new(tt)
- 111  FORMAT(f12.8,5x,f12.8,5x,f12.8,5x,f12.8,5x,f12.8)
-c
-      return
-      END
-c
-c This randomgen subroutine can be changed with any other subroutine we want
-      subroutine randomgen(iseed,rnum)
-      integer iseed
-      real*8 rnum
-      iseed  = mod(iseed*1366+150889,714025)
-      rnum   = 2.d0*(dble(iseed)/714025.d0) - 1.d0
-      return
-      end
+
 

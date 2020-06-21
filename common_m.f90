@@ -5,8 +5,8 @@ module common_m
   use timers_m
   IMPLICIT none
 
-  INTEGER istart,itime
-  INTEGER oi_chan,out_press
+  INTEGER istart,itime,ch_fin
+  INTEGER out_press
   INTEGER oi_timer,oi_cfl,oi_spec,oi_mean,oi_gbal,oi_1d
   INTEGER msvx, msvy
   real*8, parameter :: pi = 3.14159265358979324d0
@@ -32,9 +32,11 @@ module common_m
   CHARACTER*32 ch_file,tt_file,format_mode,sp_file
   real*8 volibm,volibm_mid
   real*8  ibmb(3),FI
+  real*8  oi_chan      ! change save frequency to real number 
   real*8,parameter,dimension(3) :: ibme=(/1.0d0,0.d0,0.d0/)
   real*8,allocatable,dimension(:) :: ttab,ttat,ttbb,ttbt,ttgb,ttgt
   real*8,allocatable,dimension(:) :: zets,deltaz,idz,ndeltaz,nidz,wzet
+  real*8,allocatable,dimension(:) :: zevn,vec_in,vec_out,vec_p2
 !!!!!!!!!!!!!!!!!!!!!
 
   real*8,allocatable,dimension(:) :: wavex,wavexs,wavey,waveys
@@ -116,6 +118,7 @@ module common_m
   real*8,allocatable,dimension(:,:,:) :: forcing_x01,forcing_y01,forcing_z01
   real*8,allocatable,dimension(:,:,:) :: forcing_x02,forcing_y02,forcing_z02
   real*8,allocatable,dimension(:,:,:) :: forcing_x03,forcing_y03,forcing_z03
+  real*8,allocatable,dimension(:,:,:) :: u_fft,v_fft,w_fft
   
   real*8,allocatable,dimension(:,:,:,:,:) ::  ddf
 
@@ -150,7 +153,7 @@ contains
     !
     allocate( ttab(m),ttat(m),ttbb(m),ttbt(m),ttgb(m),ttgt(m) )
     allocate( zets(nz),deltaz(nzm),idz(nzm),ndeltaz(nzm),nidz(nzm),wzet(nz) )
-
+    allocate( zevn(nz), vec_in(nz),vec_out(nz),vec_p2(nz))
     allocate( wavex(nx),wavexs(nx),wavey(ny),waveys(ny) )
     allocate( chb(nz0,nz) )
     allocate( chbd1(nz0,nz),chbd2(nz0,nz) )
@@ -172,6 +175,7 @@ contains
 
     allocate( prbc1(nzmm),  prbcn(nzmm),uvprbc1(nzmm), uvprbcn(nzmm),wprbc1(nzmm), wprbcn(nzmm),ttprbc1(nzmm),ttprbcn(nzmm) )
     allocate( u(nx0,ny0,nz),v(nx0,ny0,nz),w(nx0,ny0,nz),p(nx0,ny0,nz) )
+    
     allocate( u_temp(nx0,ny0,nz),v_temp(nx0,ny0,nz),w_temp(nx0,ny0,nz) )
     allocate( ru(nx0,ny0,nz),rv(nx0,ny0,nz),rw(nx0,ny0,nz),rp(nx0,ny0,nz) )
     allocate( h1(nx0,ny0,nz),h2(nx0,ny0,nz),h3(nx0,ny0,nz) )
@@ -190,14 +194,6 @@ contains
     !     common variables used by the ibm
     allocate(   xets(nx0),yets(ny0),xets4(-1:nx0+1),yets4(-1:ny0+1) )
     allocate(   forcing_x(nx0,ny0,nz),forcing_y(nx0,ny0,nz),forcing_z(nx0,ny0,nz) )
-    
-    allocate(   forcing_x1(nx0,ny0,nz),forcing_y1(nx0,ny0,nz),forcing_z1(nx0,ny0,nz) )
-    allocate(   forcing_x2(nx0,ny0,nz),forcing_y2(nx0,ny0,nz),forcing_z2(nx0,ny0,nz) )
-    allocate(   forcing_x3(nx0,ny0,nz),forcing_y3(nx0,ny0,nz),forcing_z3(nx0,ny0,nz) )
-    allocate(   forcing_x01(nx0,ny0,nz),forcing_y01(nx0,ny0,nz),forcing_z01(nx0,ny0,nz) )
-    allocate(   forcing_x02(nx0,ny0,nz),forcing_y02(nx0,ny0,nz),forcing_z02(nx0,ny0,nz) )
-    allocate(   forcing_x03(nx0,ny0,nz),forcing_y03(nx0,ny0,nz),forcing_z03(nx0,ny0,nz) )
-    
     allocate(   ddf(n_ll,num_p,3,3,4),ddf_dum(nx,ny,nz) )
 
     allocate(   x_c(num_p),y_c(num_p),z_c(num_p)&

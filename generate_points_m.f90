@@ -13,9 +13,6 @@ contains
 
     if(lident) then   ! identical particles
        select case(imethod)
-       case(1)
-          np = n_l(1)
-          call rand_ellipsoid_points(xa,xb,xc,np,xlp(:,1),ylp(:,1),zlp(:,1))
        case(2)
           call layer_ellipsoid_points(xa,xb,xc,np,xlp(:,1),ylp(:,1),zlp(:,1),mesh_length)
           n_l = np

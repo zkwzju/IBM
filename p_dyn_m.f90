@@ -3,11 +3,10 @@ module p_dyn_m
   
   implicit none
 contains
-  subroutine part_translation(x_p,u_p,F,grav,vol,dt)
-    use ellip_common_m, only: rho_p,rho_f
+  subroutine part_translation(x_p,u_p,F,grav,vol,dt,rho_p,rho_f)
     real(wp),intent(inout) :: x_p(3),u_p(3)
     real(wp),intent(in) :: F(3),grav(3)
-    real(wp),intent(in) :: vol,dt
+    real(wp),intent(in) :: vol,dt,rho_p,rho_f
     real(wp) :: u_p0(3)
 
     u_p0 = u_p
@@ -16,11 +15,10 @@ contains
     
   end subroutine part_translation
   ! -------------------------------------------------- !
-  subroutine part_translation2(x_p,u_p,F,grav,vol,dt)
-    use ellip_common_m, only: rho_p,rho_f
+  subroutine part_translation2(x_p,u_p,F,grav,vol,dt,rho_p,rho_f)
     real(wp),intent(inout) :: x_p(3),u_p(3)
     real(wp),intent(in) :: F(3),grav(3)
-    real(wp),intent(in) :: vol,dt
+    real(wp),intent(in) :: vol,dt,rho_p,rho_f
     real(wp) :: u_p0(3)
 
     u_p0 = u_p
@@ -29,8 +27,7 @@ contains
     
   end subroutine part_translation2
   ! -------------------------------------------------- !
-  subroutine part_rotation(ax1,ax2,ax3,om,om_b,torq,I_ellip,dt)
-    use ellip_common_m, only: rho_p,rho_f
+  subroutine part_rotation(ax1,ax2,ax3,om,om_b,torq,I_ellip,dt,rho_p,rho_f)
     use rotation_m
     
     real(wp),intent(inout) :: ax1(3),ax2(3),ax3(3) ! orientation axes
@@ -38,20 +35,19 @@ contains
     real(wp),intent(inout) :: om_b(3) ! rotation in body frame
     real(wp),intent(in)    :: torq(3) ! Eulerian frame
     real(wp),intent(in)    :: I_ellip(3)
-    real(wp),intent(in)    :: dt
+    real(wp),intent(in)    :: dt,rho_p,rho_f
 
     call rotation_leapfrog(om,om_b,ax1,ax2,ax3,torq,I_ellip,dt,dt)
     
   end subroutine part_rotation
   ! -------------------------------------------------- !
-  subroutine part_rotation2(om,torq,I_ellip,dt)
-    use ellip_common_m, only: rho_p,rho_f
+  subroutine part_rotation2(om,torq,I_ellip,dt,rho_p,rho_f)
     use rotation_m
 
     real(wp),intent(inout) :: om(3) ! rotation in Eulerian frame
     real(wp),intent(in)    :: torq(3) ! Eulerian frame
     real(wp),intent(in)    :: I_ellip(3)
-    real(wp),intent(in)    :: dt
+    real(wp),intent(in)    :: dt,rho_p,rho_f
 
     om=om+dt*rho_p*rho_f/(I_ellip*(rho_p-rho_f))*torq
   end subroutine part_rotation2

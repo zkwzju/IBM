@@ -61,7 +61,7 @@ c     if (mod(itime,oi_mean).eq.0)call make_meanf(tt,fmean,tfmean)
 !        endif
 c
 c     produce outputs in real space
-        if( mod((itime-istart),oi_chan).eq.0.or.
+        if( floor(mod(real(itime-istart),oi_chan)).eq.0.or.
      &      mod((itime-istart),oi_cfl ).eq.0.or.
      &      mod((itime-istart),oi_mean).eq.0.or.
      &      mod((itime-istart),oi_spec).eq.0.or.
@@ -76,10 +76,12 @@ c     transform to real space
 c NOTE: old vel are not fft, they are always in Fourier space
 c
 c     output a restart file
-           if(mod((itime-istart),oi_chan).eq.0) call output
+
+           if(floor(mod(real(itime-istart),oi_chan)).eq.0) call output
 c
 c     output pressure (press is in Fourier space in var p allways)
-           if(out_press.gt.0.and.mod((itime-istart),oi_chan).eq.0)
+           if(out_press.gt.0.and.
+     &          floor(mod(real(itime-istart),oi_chan)).eq.0)
      &          call output_press(out_press)
 c
 c     compute the divergence and the cfl condition 

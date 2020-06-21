@@ -53,12 +53,14 @@ c
 c
       SUBROUTINE output
       use common_m
-      use ellip_common_m, only: lcheck,lunformatted
+      use ellip_common_m, only: lcheck,lunformatted,for_px,for_py,
+     &     for_pz,torq_x,torq_y,torq_z,xlp,ylp,zlp,I_particle,
+     &     rho_particle,V_particle,axis_1,axis_2,axis_3
       implicit none
 
 c
       CHARACTER*32 anum
-      INTEGER      n
+      INTEGER      n,j
 c
       if (FLTIMER) call begin_timer(30)
       open(21,file=anum(ch_file,itime),form=format_mode)
@@ -76,15 +78,16 @@ c
       endif
 cccccccccccccccccccccccccc GA cccccccccccccccccccccccccccccccccc
       open(126,file=anum(sp_file,itime),form=format_mode)
-      do n=1,num_p
-         write(126) x_c(n),y_c(n),z_c(n),u_c(n),v_c(n),w_c(n)
-     &              ,om_x(n),om_y(n),om_z(n)
-     &              ,c_d_avg(n),c_lx_avg(n),c_lz_avg(n),icount
-      enddo
+      write(126) rho_particle,V_particle,axis_1,axis_2,axis_3,
+     &           I_particle,x_c,y_c,z_c,u_c,v_c,
+     &           w_c,om_x,om_y,om_z,
+     &           for_px,for_py,for_pz,
+     &           torq_x,torq_y,torq_z,
+     &           n_l,xlp,ylp,zlp
       close(126)
 cccccccccccccccccccccccccc GA
 c
-!>>>  
+
       if(lcheck) then
          open(375,file=anum('fIBM_1',itime),form='unformatted')
          write(375) forcing_x1,forcing_y1,forcing_z1
@@ -111,7 +114,7 @@ c
          close(376)
  
       endif
-!<<<
+
       
       if (FLTIMER) call end_timer(30)
       return

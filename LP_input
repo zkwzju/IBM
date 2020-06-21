@@ -63,13 +63,24 @@ Lagrangian weights file			: lagrangian_weights.dat
 ! if layer distribution
 ! Surface mesh length		: 0.1
 
-
+Debug flag			: 0
 Particles initial translational velocity (x,y,z)	: 0 0 0
 							  0 0 0	
 Particles initial angular velocity (x,y,z)		: 0 0 0
 							  0 0 0	
 Particles oscilation wave number and initial phase	: 1 0
-							  1 0	
+							  1 0
+
+Identical particles flag      : 1  ! deult 1
+Particles volume (filename)   : particle_volume
+Particles rotational inertia (filename)  : particle_inertia
+Particles initial location (filename)		: particle_location
+Particles 1 & 2 axes direction (filename)       : particle_axes
+Particles density (filename)   			: particle_density
+
+unformatted output			: 0
+Additional checking flag                : 0
+
 ch_file	       		: vel
 sp_file	       		: sph
 rlenx	       		: 20

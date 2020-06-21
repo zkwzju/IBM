@@ -1,0 +1,91 @@
+Grid nx				: 20
+Grid ny				: 50
+Grid nz				: 21
+Number of particle		: 1
+Max Lagrangian markers		: 2  
+ 
+IBM on flag			: 1
+Moving wall velocity (top)	: 1.0
+Moving wall velocity (bottom)	: 0.0
+!Initial v field			: 0.0
+Linear v field flag		: 1
+
+Particle initial location (x)	: 10
+Particle initial location (y)	: 25
+Particle initial location (z)	: 0.0
+
+Ellipsoid semi-axis a	: 0.6204e-0
+Ellipsoid semi-axis b	: 0.6204e-0
+Ellipsoid semi-axis c	: 0.6204e-0
+
+Particle mass density	: 2.0e0 
+Fluid mass density	: 1.0
+Gravity (y)		: 1.0e1
+Method for weight dv	: 3	! 0: exact 1:uniform ; 2: equal to local cell;3 : constant;4: file
+Update weight dv	: 0     ! 1: update dv every time step
+Rigid body assumption	: 1
+Translational motion	: 0    ! default 1
+Rotational motion	: 1
+Sphere particle		: 1    ! default 1  only apply to Rigid body assumption
+
+clip x translation	: 1	! default 0
+clip y translation      : 0     ! default 0
+clip z translation      : 1     ! default 0
+clip x rotation		: 0     ! default 0
+clip y rotation         : 1     ! default 0
+clip z rotation         : 1     ! default 0
+
+
+Rotational inertia	: 1 	1	1	! for non-ellipsoid particle
+Particle volume		: 1			! for non-ellipsoid particle
+
+Principal axis-1 direction	: 1	0	0
+Principal axis-2 direction	: 0	1	0
+
+Movement type 		: 1      ! 0:still; 1:free 2:forced			
+
+Lagrangian markers generation method	: 3 	! 1:random; 2:layered; 3:read from file
+Scale factor for particle		: 1   ! default 1
+Scale factor for dv			: 1 
+Prestep fraction			: 0.0
+Non-uniform z-grid			: 0
+Z-grid stretching parameter		: 0.99
+Additional checking flag		: 0
+Lagrangian makers file 	: dot2.dat !lagrangian_pts.plt_
+
+Lagrangian weights file			: lagrangian_weights.dat
+
+! if random distribution
+! Number of Lagrangian points	: 1000
+
+! if layer distribution
+! Surface mesh length		: 0.1
+
+
+ch_file	       		: vel
+sp_file	       		: sph
+rlenx	       		: 20
+rleny	       		: 50.0
+rlenz	       		: 20
+uvbb	       		: 0       !0:still; 1:moving
+uvbt	       		: 0
+
+istart	       		: 0
+iters	       		: 500    ! total steps
+ch_fin	       		: 0        ! restart
+m_fin	       		: 0
+oi_chan	       		: 500	   ! save frequency
+out_press      		: 200
+oi_timer       		: 90000
+oi_cfl	       		: 10
+oi_mean			: 50000
+oi_spec	       		: 90000
+oi_gbal	       		: 90000
+oi_1d	      		: 90000
+
+Reynolds number		: 1.0e1
+Pressure gradient	: 0.0
+Time step dt		: 1.0e-1
+Max CFL	  		: 1.0
+ppT 			: 0.0
+Channel tilt angle	: 0.0

@@ -1,6 +1,6 @@
 module ellipsoid_m
   use ellip_common_m
-  use common_m, only : irkk,marker_v,lident,ldebug,ibm_moving
+  use common_m, only : irkk,marker_v,lident,ldebug,ibm_moving,nzm,zevn,u_fft,v_fft,w_fft,nx0,ny0,nz,forcing_x,forcing_x1,forcing_x2,forcing_x3,forcing_y,forcing_y1,forcing_y2,forcing_y3,forcing_z,forcing_z1,forcing_z2,forcing_z3,forcing_x01,forcing_x02,forcing_x03,forcing_y01,forcing_y02,forcing_y03,forcing_z01,forcing_z02,forcing_z03,istart,ch_fin
   implicit none
 contains
   ! -------------------------------------------------- !
@@ -24,11 +24,7 @@ contains
     call parser_read('Gravity (y)',g_y,0.0_wp)
     grav=(/0.0_wp,g_y,0.0_wp/) ! gravity
     call parser_read('Method for weight dv',iweight,3)
-    if(iweight .ne.1) then
-       call parser_read('Update weight dv',lupdate_dv,.false.)
-    else
-       lupdate_dv = .false.
-    end if
+
     call parser_read('Scale factor for particle',scale_p,1.0_wp)
     call parser_read('Scale factor for dv',scale_dv,1.0_wp)
     call parser_read('Rigid body assumption',lrigid,.true.)
@@ -53,9 +49,95 @@ contains
     call parser_read('clip z rotation',lclip_oz,.false.)
 
     call parser_read('unformatted output',lunformatted,.false.)
+
+    if(lcheck) then
+       allocate(   forcing_x1(nx0,ny0,nz),forcing_y1(nx0,ny0,nz),forcing_z1(nx0,ny0,nz) )
+       allocate(   forcing_x2(nx0,ny0,nz),forcing_y2(nx0,ny0,nz),forcing_z2(nx0,ny0,nz) )
+       allocate(   forcing_x3(nx0,ny0,nz),forcing_y3(nx0,ny0,nz),forcing_z3(nx0,ny0,nz) )
+       allocate(   forcing_x01(nx0,ny0,nz),forcing_y01(nx0,ny0,nz),forcing_z01(nx0,ny0,nz) )
+       allocate(   forcing_x02(nx0,ny0,nz),forcing_y02(nx0,ny0,nz),forcing_z02(nx0,ny0,nz) )
+       allocate(   forcing_x03(nx0,ny0,nz),forcing_y03(nx0,ny0,nz),forcing_z03(nx0,ny0,nz) )
+    endif
   end subroutine read_settings
 
   ! -------------------------------------------------- !
+  subroutine init_particle_properties
+    use parser_m
+    implicit none
+    character(len=120)      :: strFile
+
+    logical  :: lrho,lvol,lvolume
+    integer  :: i,istatus
+    allocate(V_particle(num_p))      ! particles volume
+    allocate(rho_particle(num_p))    ! paritcles density
+
+    vol_ellip = 4.0_wp/3.0_wp*pi*xa*xb*xc     ! default ellipsoid volume
+
+    rho_particle = rho_p
+    V_particle   = vol_ellip
+    
+  ! read each particle density if given
+    call parser_is_defined('Particles density (filename)',lrho)
+    if(lrho) then
+       call parser_read('Particles density (filename)',strFile)
+       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
+       if(istatus .ne. 0) then
+          write(*,*) 'Problem to open file: ',strFile
+          stop
+       end if
+
+       do i=1,num_p
+          read(170,*,IOSTAT=istatus) rho_p
+          if (istatus > 0)  then
+             write(*,*) strFile, 'problematic'
+             stop
+          else if (istatus < 0) then  ! end of file reached
+             write(*,*) "particles rotational inertia in file doesn't match particles number",i,num_p
+             stop
+          else
+             rho_particle(i) = rho_p
+          end if
+       end do
+       close(170)
+    endif
+
+
+    ! to read particle volume if given (all the same volume)
+    call parser_is_defined('Particle volume',lvol)
+    if(lvol) then
+       call parser_read('Particle volume',vol_ellip)
+    end if
+
+    ! read each particle volume if given in file (different)
+    call parser_is_defined('Particles volume (filename)',lvolume)
+    if(lvolume) then
+       call parser_read('Particles volume (filename)',strFile)
+       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
+       if(istatus .ne. 0) then
+          write(*,*) 'Problem to open file: ',strFile
+          stop
+       end if
+
+       do i=1,num_p
+          read(170,*,IOSTAT=istatus) vol_ellip
+          if (istatus > 0)  then
+             write(*,*) strFile, 'problematic'
+             stop
+          else if (istatus < 0) then  ! end of file reached
+             write(*,*) "particles rotational inertia in file doesn't match particles number",i,num_p
+             stop
+          else
+             V_particle(i) = vol_ellip
+          end if
+       end do
+       close(170)
+    endif
+  
+    
+  end subroutine init_particle_properties
+  
+  ! -------------------------------------------------- !
+
   subroutine init_location
     use parser_m
     real(wp) :: x0,y0,z0
@@ -109,7 +191,122 @@ contains
           z_c(n) = z0
        end do
     endif
+
+    
   end subroutine init_location
+  ! -------------------------------------------------- !
+  subroutine init_orientation
+    use parser_m
+    implicit none
+    character(len=120) :: strFile
+    logical  :: linertia,laxis1,laxis2,laxis3,ldirection
+    real(wp) :: axis1(3),axis2(3),axis3(3),mass
+    integer  :: i,istatus
+    
+    ! particle orientation vetors
+    allocate(axis_1(3,num_p),axis_2(3,num_p),axis_3(3,num_p))
+    allocate(I_particle(3,num_p))
+
+    mass = vol_ellip * rho_p      ! default for identical ellipsoid
+    ! inertia of ellipsoid
+    I_ellip(1) = mass/5.0_wp * (xb**2 + xc**2)
+    I_ellip(2) = mass/5.0_wp * (xa**2 + xc**2)
+    I_ellip(3) = mass/5.0_wp * (xa**2 + xb**2)
+
+    ! to read rotational inertial
+    call parser_is_defined('Rotational inertia',linertia)
+    if(linertia) then
+       call parser_read('Rotational inertia',I_ellip)
+    end if
+
+    ! initial orientation vectors
+    ! axis_1
+    call parser_is_defined('Principal axis-1 direction',laxis1)
+    if(laxis1) then
+       call parser_read('Principal axis-1 direction',axis1)
+       ! normalize
+       axis1 = axis1/sqrt(axis1(1)**2+axis1(2)**2+axis1(3)**2)
+    else
+       axis1=(/1.0_wp,0.0_wp,0.0_wp/)
+    end if
+    ! axis_2
+    call parser_is_defined('Principal axis-2 direction',laxis2)
+    if(laxis2) then
+       call parser_read('Principal axis-2 direction',axis2)
+       ! normalize
+       axis2 = axis2/sqrt(axis2(1)**2+axis2(2)**2+axis2(3)**2)
+    else
+       axis2=(/0.0_wp,1.0_wp,0.0_wp/)
+    end if
+    ! axis3 = axis1 x axis2
+    axis3 = cross(axis1,axis2)
+
+    ! All particles have same mass and initial orientation, if not specified
+    do i=1,num_p      
+       axis_1(:,i) = axis1
+       axis_2(:,i) = axis2
+       axis_3(:,i) = axis3
+       I_particle(:,i) = I_ellip
+    end do
+
+    ! read initial orientation if defined
+    call parser_is_defined('Particles 1 & 2 axes direction (filename)',ldirection)
+    if(ldirection) then
+       call parser_read('Particles 1 & 2 axes direction (filename)',strFile)
+       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
+       if(istatus .ne. 0) then
+          write(*,*) 'Problem to open file: ',strFile
+          stop
+       end if
+
+       do i=1,num_p
+          read(170,*,IOSTAT=istatus) axis1,axis2
+          ! normalize
+          axis1 = axis1/sqrt(axis1(1)**2+axis1(2)**2+axis1(3)**2)
+          axis2 = axis2/sqrt(axis2(1)**2+axis2(2)**2+axis2(3)**2)
+          if (istatus > 0)  then
+             write(*,*) strFile, 'problematic'
+             stop
+          else if (istatus < 0) then  ! end of file reached
+             write(*,*) "particles direction in file doesn't match particles number",i,num_p
+             stop
+          else
+             axis3 = cross(axis1,axis2)
+             axis_1(:,i) = axis1
+             axis_2(:,i) = axis2
+             axis_3(:,i) = axis3
+          end if
+       end do
+       close(170)
+    endif
+
+    ! read particles inertia if defined
+    call parser_is_defined('Particles rotational inertia (filename)',linertia)
+    if(linertia) then
+       call parser_read('Particles rotational inertia (filename)',strFile)
+       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
+       if(istatus .ne. 0) then
+          write(*,*) 'Problem to open file: ',strFile
+          stop
+       end if
+
+       do i=1,num_p
+          read(170,*,IOSTAT=istatus) I_ellip
+          if (istatus > 0)  then
+             write(*,*) strFile, 'problematic'
+             stop
+          else if (istatus < 0) then  ! end of file reached
+             write(*,*) "particles rotational inertia in file doesn't match particles number",i,num_p
+             stop
+          else
+             I_particle(:,i) = I_ellip
+          end if
+       end do
+       close(170)
+    endif
+
+    
+  end subroutine init_orientation
   ! -------------------------------------------------- !
 
   subroutine init_velocity
@@ -180,176 +377,29 @@ contains
        endif
     endif
 
+       
   end subroutine init_velocity
   
   ! -------------------------------------------------- !
-  
-  subroutine initialize_ellip
+  subroutine init_markers
     use parser_m
+    use generate_points_m
     implicit none
-    character(len=120)      :: input,command_buffer,strFile
+    logical  :: lflag
     character(len=120), allocatable :: buffer(:)
-    real(wp) :: p,mass 
-    integer  :: imove
-    integer  :: i,Np,istatus
-    logical  :: lflag,laxis1,laxis2,laxis3,linertia,lvol,ldirection,lmarker_vel
-    real(wp) :: axis1(3),axis2(3),axis3(3)
-
-    ! particle orientation vetors
-    allocate(axis_1(3,num_p),axis_2(3,num_p),axis_3(3,num_p))
-    allocate(I_particle(3,num_p))
+    integer  :: i
+    
     ! particle Lagrangian markers coordinates wrt particle center
     if(lident) then       ! identical particles
        allocate(xlp(n_ll,1),ylp(n_ll,1),zlp(n_ll,1))
     else
        allocate(xlp(n_ll,num_p),ylp(n_ll,num_p),zlp(n_ll,num_p))
     endif
-
-    allocate(x_0(num_p),x_1(num_p),y_0(num_p),y_1(num_p),z_0(num_p),z_1(num_p))
-    allocate(for_px(num_p),for_py(num_p),for_pz(num_p))
-    allocate(torq_x(num_p),torq_y(num_p),torq_z(num_p))
-
-    ! setting control perameters
-
-    vol_ellip = 4.0_wp/3.0_wp*pi*xa*xb*xc     ! ellipsoid volume
-
-    ! to read particle volume
-    call parser_is_defined('Particle volume',lvol)
-    if(lvol) then
-       call parser_read('Particle volume',vol_ellip)
-    end if
-
-    mass = vol_ellip * rho_p
-
-    ! inertia of ellipsoid
-    I_ellip(1) = mass/5.0_wp * (xb**2 + xc**2)
-    I_ellip(2) = mass/5.0_wp * (xa**2 + xc**2)
-    I_ellip(3) = mass/5.0_wp * (xa**2 + xb**2)
-
-    ! to read rotational inertial
-    call parser_is_defined('Rotational inertia',linertia)
-    if(linertia) then
-       call parser_read('Rotational inertia',I_ellip)
-    end if
-
-    ! initial orientation vectors
-    ! axis_1
-    call parser_is_defined('Principal axis-1 direction',laxis1)
-    if(laxis1) then
-       call parser_read('Principal axis-1 direction',axis1)
-       ! normalize
-       axis1 = axis1/sqrt(axis1(1)**2+axis1(2)**2+axis1(3)**2)
-    else
-       axis1=(/1.0_wp,0.0_wp,0.0_wp/)
-    end if
-    ! axis_2
-    call parser_is_defined('Principal axis-2 direction',laxis2)
-    if(laxis2) then
-       call parser_read('Principal axis-2 direction',axis2)
-       ! normalize
-       axis2 = axis2/sqrt(axis2(1)**2+axis2(2)**2+axis2(3)**2)
-    else
-       axis2=(/0.0_wp,1.0_wp,0.0_wp/)
-    end if
-    ! axis3 = axis1 x axis2
-    axis3 = cross(axis1,axis2)
     
-    do i=1,num_p      ! all particles have same initial orientation
-       axis_1(:,i) = axis1
-       axis_2(:,i) = axis2
-       axis_3(:,i) = axis3
-       I_particle(:,i) = I_ellip
-    end do
-
-    ! read initial orientation if defined
-    call parser_is_defined('Particles 1 & 2 axes direction (filename)',ldirection)
-    if(ldirection) then
-       call parser_read('Particles 1 & 2 axes direction (filename)',strFile)
-       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
-       if(istatus .ne. 0) then
-          write(*,*) 'Problem to open file: ',strFile
-          stop
-       end if
-
-       do i=1,num_p
-          read(170,*,IOSTAT=istatus) axis1,axis2
-          ! normalize
-          axis1 = axis1/sqrt(axis1(1)**2+axis1(2)**2+axis1(3)**2)
-          axis2 = axis2/sqrt(axis2(1)**2+axis2(2)**2+axis2(3)**2)
-          if (istatus > 0)  then
-             write(*,*) strFile, 'problematic'
-             stop
-          else if (istatus < 0) then  ! end of file reached
-             write(*,*) "particles direction in file doesn't match particles number",i,num_p
-             stop
-          else
-             axis3 = cross(axis1,axis2)
-             axis_1(:,i) = axis1
-             axis_2(:,i) = axis2
-             axis_3(:,i) = axis3
-          end if
-       end do
-       close(170)
-    endif
-
-    ! read particles inertia if defined
-    call parser_is_defined('Particles rotational inertia (filename)',linertia)
-    if(linertia) then
-       call parser_read('Particles rotational inertia (filename)',strFile)
-       open(unit=170, file=strFile, STATUS='OLD',iostat=istatus)
-       if(istatus .ne. 0) then
-          write(*,*) 'Problem to open file: ',strFile
-          stop
-       end if
-
-       do i=1,num_p
-          read(170,*,IOSTAT=istatus) I_ellip
-          if (istatus > 0)  then
-             write(*,*) strFile, 'problematic'
-             stop
-          else if (istatus < 0) then  ! end of file reached
-             write(*,*) "particles rotational inertia in file doesn't match particles number",i,num_p
-             stop
-          else
-             I_particle(:,i) = I_ellip
-          end if
-       end do
-       close(170)
-    endif
-
-
     call parser_read('Lagrangian markers generation method',imethod,2)
     ! approximate surface area of an ellipsoid
-    p=1.6075_wp
-    S_ellp=4*pi*((xa**p * xb**p + xa**p * xc**p +xb**p * xc**p)/3.0_wp)**(1.0_wp/p)
 
     select case(imethod)
-    case(1)
-       call random_seed()       ! random function seeding
-       call parser_is_defined('Number of Lagrangian points',lflag)
-       if(lflag) then
-          call parser_read('Number of Lagrangian points',Np)
-          do i=1,num_p   
-             n_l(i) = Np
-          end do
-       else              ! default random distribution determined by Eulerian grid
-
-          do i=1,num_p
-             n_l(i) = int(S_ellp/(deltax*deltay))
-          end do
-       end if
-       ! ------------------------------ !
-       do i=1,num_p
-          if(n_l(i) .eq. 0) then
-             write(*,*) 'Fatal: Number of Lagranitan points is zero'
-             stop
-          end if
-          if(n_l(i)>n_ll) then
-             write(*,*) 'Fatal: Number of Lagrangian points is bigger than allocated', n_l(i),'>', n_ll
-             stop
-          end if
-       end do
-       ! -------------------------------------------------- !
     case(2)        ! non-random distribution
        call parser_is_defined('Surface mesh length',lflag)
        if(lflag) then
@@ -361,7 +411,7 @@ contains
     case(3)
        call parser_read('Lagrangian makers file',sname,'lagrangian_pts.plt')
     case default
-       write(*,*) 'Method can only be 1, 2, or 3, for random, length specified, and reading from file, respectively'
+       write(*,*) 'Method can only be 2 or 3, for length specified, and reading from file, respectively'
        stop
     end select
 
@@ -373,6 +423,9 @@ contains
        open(unit=355, file='fluid_vel_at_markers')
        call parser_getsize('Markers to check fluid velocity',nmarker)
        nmarker = nmarker/2
+       allocate(u_interp(nmarker),v_interp(nmarker),w_interp(nmarker))
+       allocate(u_fft(nx0,ny0,nz),v_fft(nx0,ny0,nz),w_fft(nx0,ny0,nz))
+       
        allocate(buffer(nmarker*2))
        allocate(marker_ind(nmarker,2))
        call parser_read('Markers to check fluid velocity',buffer)
@@ -382,6 +435,32 @@ contains
        enddo
        deallocate(buffer)
     end if
+
+    call generate_points
+  end subroutine init_markers
+
+  ! -------------------------------------------------- !
+  
+  subroutine initialize_ellip
+    use parser_m
+    implicit none
+
+    allocate(x_0(num_p),x_1(num_p),y_0(num_p),y_1(num_p),z_0(num_p),z_1(num_p))
+    allocate(for_px(num_p),for_py(num_p),for_pz(num_p))
+    allocate(torq_x(num_p),torq_y(num_p),torq_z(num_p))
+    for_px = 0.0_wp
+    for_py = 0.0_wp
+    for_pz = 0.0_wp
+    torq_x = 0.0_wp
+    torq_y = 0.0_wp
+    torq_z = 0.0_wp
+
+
+    call init_particle_properties
+    call init_location
+    call init_orientation
+    call init_velocity
+    call init_markers
 
     !    write(*,*) 'initialize_ellip done'
   end subroutine initialize_ellip
@@ -443,36 +522,80 @@ contains
              write(*,*) "z_o out of bound",z_o(l,n)
              stop
           endif
-          if(z_o(l,n) < zets(1) .and. z_o(l,n) > zets(2)) then    ! zets decreasing along k
-             p_kb(l,n) = 1
-             p_kt(l,n) = 2
-             marker_v(l,n) = deltax*deltay*dabs(zets(1)-zets(2))/2.0_wp
-          elseif(z_o(l,n) > zets(nz) .and. z_o(l,n) < zets(nz-1)) then
-             p_kb(l,n) = nz-1
-             p_kt(l,n) = nz
-             marker_v(l,n) = deltax*deltay*dabs(zets(nz)-zets(nz-1))/2.0_wp
-          else
-             if(z_o(l,n) .ge. 0.0_wp) then
-                do k=3,floor((nz+1)/2.0_wp)
-                   if(zets(k) .le. z_o(l,n)) then
-                      p_kb(l,n) = k-2
-                      p_kt(l,n) = k+1
-                      marker_v(l,n) = deltax*deltay*dabs(zets(k+1)-zets(k-1))/2.0_wp
-                      goto 400
-                   endif
-                enddo
-             else                               ! anti-symmetric treatment 
-                do k = nz-2, floor((nz+1)/2.0_wp),-1
-                   if(zets(k) .ge. z_o(l,n)) then
-                      p_kb(l,n) = k-1
-                      p_kt(l,n) = k+2
-                      marker_v(l,n) = deltax*deltay*dabs(zets(k+1)-zets(k-1))/2.0_wp
-                      goto 400
-                   endif
-                enddo
+          if(aalpha .eq. -1) then
+             if(z_o(l,n) > 0) then
+                if(z_o(l,n) > zevn(1)-0.5_wp*deltaz(1)) then
+                   p_kb(l,n) = 1
+                   p_kt(l,n) = 2
+                   marker_v(l,n) = deltax*deltay*0.5_wp*deltaz(1) !deltaz uniform
+                else  ! interial points
+                   do k=2,nzm/2
+                      if(z_o(l,n) .ge. zevn(k)) then
+                         if(z_o(l,n) .ge. zevn(k)+0.5_wp*deltaz(1)) then
+                            p_kb(l,n) = k
+                            p_kt(l,n) = k+2
+                         else
+                            p_kb(l,n) = k-1
+                            p_kt(l,n) = k+1
+                         endif
+                         marker_v(l,n) = deltax*deltay*deltaz(1)
+                         goto 400
+                      endif
+                   enddo
+                endif
+             else     ! z_o(l,n) <=0
+                if(z_o(l,n) < zevn(nz)+0.5_wp*deltaz(1)) then
+                   p_kb(l,n) = nz-1
+                   p_kt(l,n) = nz
+                   marker_v(l,n) = deltax*deltay*0.5_wp*deltaz(1) !deltaz uniform
+                else
+                   do k=nzm/2,nzm
+                      if(z_o(l,n) .ge. zevn(k)) then
+                         if(z_o(l,n) .ge. zevn(k)+0.5_wp*deltaz(1)) then
+                            p_kb(l,n) = k
+                            p_kt(l,n) = k+2
+                         else
+                            p_kb(l,n) = k-1
+                            p_kt(l,n) = k+1
+                         endif
+                         marker_v(l,n) = deltax*deltay*deltaz(1)
+                         goto 400
+                      endif
+                   enddo
+                end if
              endif
-400          continue
-          endif
+          else  ! aalpha neq -1
+             if(z_o(l,n) < zets(1) .and. z_o(l,n) > zets(2)) then    ! zets decreasing along k
+                p_kb(l,n) = 1
+                p_kt(l,n) = 2
+                marker_v(l,n) = deltax*deltay*dabs(zets(1)-zets(2))/2.0_wp
+             elseif(z_o(l,n) > zets(nz) .and. z_o(l,n) < zets(nz-1)) then
+                p_kb(l,n) = nz-1
+                p_kt(l,n) = nz
+                marker_v(l,n) = deltax*deltay*dabs(zets(nz)-zets(nz-1))/2.0_wp
+             else
+                if(z_o(l,n) .ge. 0.0_wp) then
+                   do k=3,floor((nz+1)/2.0_wp)
+                      if(zets(k) .le. z_o(l,n)) then
+                         p_kb(l,n) = k-2
+                         p_kt(l,n) = k+1
+                         marker_v(l,n) = deltax*deltay*dabs(zets(k+1)-zets(k-1))/2.0_wp
+                         goto 400
+                      endif
+                   enddo
+                else                               ! anti-symmetric treatment 
+                   do k = nz-2, floor((nz+1)/2.0_wp),-1
+                      if(zets(k) .ge. z_o(l,n)) then
+                         p_kb(l,n) = k-1
+                         p_kt(l,n) = k+2
+                         marker_v(l,n) = deltax*deltay*dabs(zets(k+1)-zets(k-1))/2.0_wp
+                         goto 400
+                      endif
+                   enddo
+                endif
+             endif
+          endif       ! endif aalpha
+400       continue
        enddo
     enddo
     !$OMP END PARALLEL DO
@@ -523,17 +646,19 @@ contains
     !$OMP END PARALLEL DO
 
     if(irkk .eq. 3) then
+       if((ch_fin.eq.1) .and. (itime.eq.istart+1)) goto 5000
+       
        if(lunformatted) then
-          write(88,  rec=itime),itime,axis_1,axis_2
-          write(1110,rec=itime),itime,x_c
-          write(1111,rec=itime),itime,y_c
-          write(1112,rec=itime),itime,z_c
-          write(1120,rec=itime),itime,u_c
-          write(1121,rec=itime),itime,v_c
-          write(1122,rec=itime),itime,w_c
-          write(120,rec=itime),itime,om_x
-          write(121,rec=itime),itime,om_y
-          write(122,rec=itime),itime,om_z
+          write(88  ),itime,axis_1,axis_2
+          write(1110),itime,x_c
+          write(1111),itime,y_c
+          write(1112),itime,z_c
+          write(1120),itime,u_c
+          write(1121),itime,v_c
+          write(1122),itime,w_c
+          write(120 ),itime,om_x
+          write(121 ),itime,om_y
+          write(122 ),itime,om_z
        else
           write(88,   312) itime,axis_1,axis_2
           write(1110, 311) itime,x_c
@@ -546,6 +671,7 @@ contains
           write(121,  311) itime,om_y
           write(122,  311) itime,om_z
        endif
+5000   continue ! skip first step output when restarting
     endif
 311 format (I7,<num_p>E15.7)
 312 format (I7,<num_p*6>f10.6)   
@@ -651,7 +777,6 @@ contains
     return
   end subroutine s_shift2range_z
   ! -------------------------------------------------- !
-
 
   ! -------------------------------------------------- !
   subroutine single_point_test(f_in,f_out)

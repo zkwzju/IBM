@@ -111,19 +111,33 @@ c     Calculating the dirac delta function in the z direction
             enddo
          endif
 
-      else                      
-         do k=k1,k2             
-            if(k .eq. 1 .or. k .eq. 2) then
-               call FI_2point(z_o(l1,n1),k,1)
-            elseif(k .eq. nz .or. k .eq. nzm) then
-               call FI_2point(z_o(l1,n1),k,nz)
-            else
-               hz = abs(zets(k-1)-zets(k+1))/2.d0
-               R=dabs(zets(k)-z_o(l1,n1))/hz
-               call FI_3point(R)
-            endif
-            dum3(k)=FI
-         enddo
+      else                      ! uniform
+         if(aalpha .eq. -1) then
+            do k=k1,k2
+               if(k .eq. 1 )then
+                  call FI_2point(z_o(l1,n1),k,1) ! correctness not checked
+               elseif(k .eq. nz) then
+                  call FI_2point(z_o(l1,n1),k,nz)
+               else
+                  R=dabs(zevn(k)-z_o(l1,n1))/deltaz(1)
+                  call FI_3point(R)
+               endif
+               dum3(k)=FI
+            end do
+         else    ! aalpha neq -1
+            do k=k1,k2             
+               if(k .eq. 1 .or. k .eq. 2) then
+                  call FI_2point(z_o(l1,n1),k,1)
+               elseif(k .eq. nz .or. k .eq. nzm) then
+                  call FI_2point(z_o(l1,n1),k,nz)
+               else
+                  hz = abs(zets(k-1)-zets(k+1))/2.d0
+                  R=dabs(zets(k)-z_o(l1,n1))/hz
+                  call FI_3point(R)
+               endif
+               dum3(k)=FI
+            enddo
+         endif    ! end aalpha
       endif
 cC$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(i,i_t,j,j_t,k)
       do i=i1,i2

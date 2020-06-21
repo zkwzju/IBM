@@ -1,6 +1,6 @@
 module init_m
   use common_m
-  INTEGER ch_fin,m_fin,sph_fin,iters,itfirst,iend,i,j,k
+  INTEGER m_fin,sph_fin,iters,itfirst,iend,i,j,k
   INTEGER tt_yes,ngbal,n1d
   REAL*8  dt0,dt_p,KE,Ep,diss,ddtEp
 
@@ -12,6 +12,7 @@ contains
     integer  :: reclen
     logical  :: lviscosity
     real(wp) :: A_size(3,3)
+    character(len=120) :: file_position,file_form,file_status
     
     print *, 'Program running'
 
@@ -32,7 +33,7 @@ contains
     call parser_read('iters',iters,1000)
     call parser_read('ch_fin',ch_fin,0)
     call parser_read('m_fin',m_fin,0)
-    call parser_read('oi_chan',oi_chan,100)
+    call parser_read('oi_chan',oi_chan,100.0_wp)
     call parser_read('out_press',out_press,100)
     call parser_read('oi_timer',oi_timer,1000000)
     call parser_read('oi_cfl',oi_cfl,100)
@@ -109,7 +110,7 @@ contains
 
 
     open(26,file='logfile')
-    call initial(dt0,ch_fin,m_fin)  ! initialization of IBM related
+    call initial(dt0,m_fin)  ! initialization of IBM related
     call correlation(n_ll)          ! to check weight if too big
     
     ! output grid
@@ -127,8 +128,12 @@ contains
     ! produce complete output for initial condition if ...
     if(ch_fin.eq.0)then
        call output
-
-    endif !(ch_fin.eq.0)
+       file_position = 'rewind'
+       file_status   = 'unknown'
+    else
+       file_position = 'append'
+       file_status   = 'old'
+    endif
 
     call divg
 
@@ -154,69 +159,48 @@ contains
     else
        gradpbar=ppA
     endif
-
-    open(unit=114, file='liftx')
-    open(unit=115, file='drag')
-    open(unit=116, file='liftz')
-
+    
+    open(unit=114, file='liftx',status=file_status,position=file_position)
+    open(unit=115, file='drag', status=file_status,position=file_position)
+    open(unit=116, file='liftz',status=file_status,position=file_position)
 
 
     if(lunformatted) then
-
-       if(lcheck) then
-          ! open file for velocity difference between fluid and Lagrangian marker
-          open(666,file='vel_diff.dat',STATUS='UNKNOWN',form='unformatted')
-       endif
-       inquire(iolength=reclen) itime,axis_1,axis_2
-       open(unit=88,file='orientation_matrix.bin',access='direct',form='unformatted',status='replace',recl=reclen)
-       inquire(iolength=reclen) itime,x_c
-       open(unit=1110, file='position_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle position
-       open(unit=1111, file='position_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle position
-       open(unit=1112, file='position_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle position
-       open(unit=1120, file='velocity_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle velocity
-       open(unit=1121, file='velocity_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle velocity
-       open(unit=1122, file='velocity_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)      ! particle velocity
-       open(unit=120, file='om_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)             ! rotational velocity
-       open(unit=121, file='om_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)
-       open(unit=122, file='om_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)
-        
-       open(unit=123, file='moment_x.bin',access='direct',form='unformatted',status='replace',recl=reclen)
-       open(unit=124, file='moment_y.bin',access='direct',form='unformatted',status='replace',recl=reclen)
-       open(unit=125, file='moment_z.bin',access='direct',form='unformatted',status='replace',recl=reclen)
-       open(unit=223, file='force_x.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
-       open(unit=224, file='force_y.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
-       open(unit=225, file='force_z.bin' ,access='direct',form='unformatted',status='replace',recl=reclen)
+       file_form = 'unformatted'
     else
-       if(lcheck) then
-          ! open file for velocity difference between fluid and Lagrangian marker
-          open(666,file='vel_diff.dat',STATUS='UNKNOWN')
-       endif
-       open(unit=123, file='moment_x')
-       open(unit=124, file='moment_y')
-       open(unit=125, file='moment_z')
-       open(unit=223, file='force_x')
-       open(unit=224, file='force_y')
-       open(unit=225, file='force_z')
-       open(unit=88,file='orientation_matrix')
-       open(unit=1110, file='position_x')      ! particle position
-       open(unit=1111, file='position_y')      ! particle position
-       open(unit=1112, file='position_z')      ! particle position
-       open(unit=1120, file='velocity_x')      ! particle velocity
-       open(unit=1121, file='velocity_y')      ! particle velocity
-       open(unit=1122, file='velocity_z')      ! particle velocity
-       open(unit=120, file='om_x')             ! rotational velocity        
-       open(unit=121, file='om_y')
-       open(unit=122, file='om_z')
+       file_form = 'formatted'
     endif
+    
+    if(lcheck) then
+          ! open file for velocity difference between fluid and Lagrangian marker
+       open(666,file='vel_diff.dat',status=file_status,position=file_position,form=file_form)
+    endif
+    open(unit=88,file='orientation_matrix',status=file_status,position=file_position,form=file_form)
+    open(unit=1110, file='position_x'     ,status=file_status,position=file_position,form=file_form)
+    open(unit=1111, file='position_y'     ,status=file_status,position=file_position,form=file_form)
+    open(unit=1112, file='position_z'     ,status=file_status,position=file_position,form=file_form)
+    open(unit=1120, file='velocity_x'     ,status=file_status,position=file_position,form=file_form)
+    open(unit=1121, file='velocity_y'     ,status=file_status,position=file_position,form=file_form)
+    open(unit=1122, file='velocity_z'     ,status=file_status,position=file_position,form=file_form)
+    open(unit=120, file='om_x'            ,status=file_status,position=file_position,form=file_form)
+    open(unit=121, file='om_y'            ,status=file_status,position=file_position,form=file_form)
+    open(unit=122, file='om_z'            ,status=file_status,position=file_position,form=file_form)
+
+    open(unit=123, file='moment_x'        ,status=file_status,position=file_position,form=file_form)
+    open(unit=124, file='moment_y'        ,status=file_status,position=file_position,form=file_form)
+    open(unit=125, file='moment_z'        ,status=file_status,position=file_position,form=file_form)
+    open(unit=223, file='force_x'         ,status=file_status,position=file_position,form=file_form)
+    open(unit=224, file='force_y'         ,status=file_status,position=file_position,form=file_form)
+    open(unit=225, file='force_z'         ,status=file_status,position=file_position,form=file_form)
 
     if(.not. lrigid)  then ! integration of vel inside particle wt rigid body assumption
-       open(unit=301,file='body_int_u',STATUS='UNKNOWN')
-       open(unit=302,file='body_int_v',STATUS='UNKNOWN')
-       open(unit=303,file='body_int_w',STATUS='UNKNOWN')
+       open(unit=301,file='body_int_u',status=file_status,position=file_position,form=file_form)
+       open(unit=302,file='body_int_v',status=file_status,position=file_position,form=file_form)
+       open(unit=303,file='body_int_w',status=file_status,position=file_position,form=file_form)
        if(lrotation) then
-          open(unit=304,file='body_int_r_u',STATUS='UNKNOWN')
-          open(unit=305,file='body_int_r_v',STATUS='UNKNOWN')
-          open(unit=306,file='body_int_r_w',STATUS='UNKNOWN')
+          open(unit=304,file='body_int_r_u',status=file_status,position=file_position,form=file_form)
+          open(unit=305,file='body_int_r_v',status=file_status,position=file_position,form=file_form)
+          open(unit=306,file='body_int_r_w',status=file_status,position=file_position,form=file_form)
        endif
     endif
     

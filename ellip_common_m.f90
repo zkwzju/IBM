@@ -11,12 +11,13 @@ module ellip_common_m
   real(wp)              :: om_ellip(3),om_ellip_b(3)
   real(wp)              :: I_ellip(3)
   real(wp), allocatable :: axis_1(:,:),axis_2(:,:),axis_3(:,:)
-  real(wp), allocatable :: I_particle(:,:)
+  real(wp), allocatable :: V_particle(:), I_particle(:,:),rho_particle(:)
   real(wp)              :: rho_p,rho_f,vt_l,vb_l
   real(wp)              :: grav(3)
   real(wp), allocatable :: for_px(:),for_py(:),for_pz(:)
   real(wp), allocatable :: torq_x(:),torq_y(:),torq_z(:)
   real(wp), allocatable :: n_wave(:),phase0(:)
+  real(wp), allocatable :: u_interp(:),v_interp(:),w_interp(:)
   
   real(wp) :: xa,xb,xc
   real(wp) :: mesh_length
@@ -26,7 +27,7 @@ module ellip_common_m
   
   integer  :: imethod
   integer  :: iweight,iflag_ibm,nmarker
-  logical  :: lexact_weight,lupdate_dv,lrigid,lnonuniform,lrotation,ltranslation
+  logical  :: lexact_weight,lrigid,lnonuniform,lrotation,ltranslation
   logical  :: lclip_x,lclip_y,lclip_z,lclip_ox,lclip_oy,lclip_oz
   logical  :: lcheck,llinear_v,lsphere,lconvect,lunformatted
   logical  :: lcheckmarker
